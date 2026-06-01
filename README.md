@@ -5,12 +5,12 @@ text prompts, input images for img2img flows, and final generated images. It
 returns a machine-readable verdict, violated category, detector evidence, and a
 human-readable rationale.
 
-The default profile is intentionally lightweight enough for a MacBook M4:
+The default local profile is intentionally lightweight enough for a MacBook:
 
-- `AIML-TUDA/LlavaGuard-v1.2-0.5B-OV-hf` as the main VLM safety judge.
 - `Falconsai/nsfw_image_detection` as a fast NSFW image classifier.
-- `MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli` as a prompt zero-shot guard.
-- Optional `google/shieldgemma-2-4b-it` as a stronger gated image safety model.
+- a local keyword prompt guard for obvious high-risk prompt requests.
+- optional `AIML-TUDA/LlavaGuard-v1.2-0.5B-OV-hf` for stronger image reasoning.
+- optional `google/shieldgemma-2-4b-it` for stronger gated image safety checks.
 
 ## Architecture
 
@@ -33,55 +33,87 @@ outputs.
 
 ## Quick Start
 
+Install everything into a project-local virtual environment:
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install -e .
+scripts/install_local.sh
 ```
 
-Dry-run the pipeline without downloading models:
+Start the local API:
 
 ```bash
-img-censor --config configs/pipeline.yaml --prompt "safe banking banner" --mock
+scripts/run_local_api.sh
 ```
 
-Run real local checks. The first run downloads the selected Hugging Face models:
+Open the interactive API docs:
 
-```bash
-img-censor \
-  --config configs/pipeline.yaml \
-  --prompt "make a realistic promo image for a bank card" \
-  --output-image ./samples/generated.png
+```text
+http://127.0.0.1:8000/docs
 ```
 
-Pre-download enabled lightweight models:
+Check service health:
 
 ```bash
-PYTHONPATH=src python scripts/download_models.py --config configs/pipeline.yaml
+curl http://127.0.0.1:8000/health
 ```
 
-Use a stricter profile by lowering the block threshold:
+Run a prompt check from the terminal:
 
 ```bash
-img-censor --config configs/pipeline.yaml --output-image ./image.png --block-threshold 0.55
+curl -X POST http://127.0.0.1:8000/v1/censor \
+  -F 'prompt=make a realistic promo image for a bank card'
+```
+
+Run an image check from the terminal:
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/censor \
+  -F 'output_image=@./samples/generated.png'
+```
+
+Dry-run the CLI without downloading models:
+
+```bash
+.venv/bin/img-censor --config configs/local.yaml --prompt "safe banking banner" --mock
+```
+
+Pre-download enabled local models:
+
+```bash
+.venv/bin/python scripts/download_models.py --config configs/local.yaml
+```
+
+Use the fuller local model profile:
+
+```bash
+IMG_CENSOR_CONFIG=configs/pipeline.yaml scripts/run_local_api.sh
+```
+
+Use a stricter CLI profile by lowering the block threshold:
+
+```bash
+.venv/bin/img-censor --config configs/local.yaml --output-image ./image.png --block-threshold 0.55
 ```
 
 Evaluate a CSV manifest:
 
 ```bash
-PYTHONPATH=src python scripts/evaluate_manifest.py examples/eval_manifest.example.csv --config configs/pipeline.yaml
+.venv/bin/python scripts/evaluate_manifest.py examples/eval_manifest.example.csv --config configs/local.yaml
 ```
 
 ## Project Layout
 
 ```text
-configs/pipeline.yaml          Runtime model registry and thresholds
+configs/local.yaml             Mac-friendly default runtime profile
+configs/pipeline.yaml          Fuller runtime model registry and thresholds
 docs/architecture.md           End-to-end pipeline design
 docs/taxonomy.md               Prohibited content taxonomy
 docs/threat-model.md           MLSecOps threat model
 docs/model-selection.md        Lightweight model choices for MacBook M4
 src/img_censor/                Pipeline implementation
+src/img_censor/__main__.py     Allows python -m img_censor CLI usage
+scripts/install_local.sh       Create .venv and install local dependencies
+scripts/run_local_api.sh       Start the local FastAPI service
 tests/                         Tests that do not download models
 models/hf-cache/               Local Hugging Face cache, contents ignored
 samples/                       Local demo images, contents ignored
@@ -89,6 +121,7 @@ samples/                       Local demo images, contents ignored
 
 ## Notes
 
-LlavaGuard is the default reasoning layer because the 0.5B HF version is small
-and provides a safety category plus rationale. ShieldGemma 2 is kept optional:
-it is stronger for its three native policies, but the model is gated and 4B.
+The API runs fully on your machine. The first real image check may download an
+enabled Hugging Face model into `models/hf-cache`; after that, inference uses
+the local cache. ShieldGemma 2 is kept optional because the model is gated and
+requires accepting the Google Gemma license.
