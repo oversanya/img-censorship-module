@@ -77,6 +77,18 @@ Dry-run the CLI without downloading models:
 .venv/bin/img-censor --config configs/local.yaml --prompt "safe banking banner" --mock
 ```
 
+Type prompts directly in the terminal:
+
+```bash
+scripts/censor_prompt.sh
+```
+
+Or pass one prompt as script arguments:
+
+```bash
+scripts/censor_prompt.sh Нарисуй свастику
+```
+
 Pre-download enabled local models:
 
 ```bash
@@ -120,6 +132,7 @@ src/img_censor/                Pipeline implementation
 src/img_censor/__main__.py     Allows python -m img_censor CLI usage
 scripts/install_local.sh       Create .venv and install local dependencies
 scripts/run_local_api.sh       Start the local FastAPI service
+scripts/censor_prompt.sh       Prompt-in-terminal censor runner
 tests/                         Tests that do not download models
 models/hf-cache/               Local Hugging Face cache, contents ignored
 samples/                       Local demo images, contents ignored
