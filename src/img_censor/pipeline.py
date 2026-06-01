@@ -1,3 +1,4 @@
+import time
 from typing import Dict, List
 
 from img_censor.aggregator import aggregate
@@ -5,11 +6,14 @@ from img_censor.detectors import (
     ClipZeroShotDetector,
     LlavaGuardDetector,
     NsfwVitDetector,
+    OcrTextDetector,
     PromptKeywordGuard,
     PromptToxicityDetector,
     PromptZeroShotDetector,
+    QrCodeDetector,
     ShieldGemmaDetector,
 )
+from img_censor.review_queue import maybe_enqueue_review
 from img_censor.schemas import Finding, GuardRequest, GuardResult
 
 
@@ -18,6 +22,8 @@ DETECTOR_CLASSES = {
     "prompt_toxicity": PromptToxicityDetector,
     "prompt_zero_shot": PromptZeroShotDetector,
     "nsfw_vit": NsfwVitDetector,
+    "ocr_text": OcrTextDetector,
+    "qr_code": QrCodeDetector,
     "llavaguard": LlavaGuardDetector,
     "clip_zero_shot": ClipZeroShotDetector,
     "shieldgemma": ShieldGemmaDetector,
@@ -42,9 +48,18 @@ class ImageCensorPipeline:
 
     def check(self, request: GuardRequest) -> GuardResult:
         findings: List[Finding] = []
+        latency_ms = {}
         for detector in self.detectors:
+            started_at = time.perf_counter()
             findings.extend(detector.run(request))
-        return aggregate(findings, self.decision_config)
+            latency_ms[detector.name] = round((time.perf_counter() - started_at) * 1000, 3)
+
+        result = aggregate(findings, self.decision_config)
+        result.audit["latency_ms"] = latency_ms
+        result.audit["request_id"] = request.request_id
+        result.audit["scenario"] = request.scenario
+        maybe_enqueue_review(result, request, self.decision_config.get("review_queue_path"))
+        return result
 
     def describe(self) -> Dict:
         return {

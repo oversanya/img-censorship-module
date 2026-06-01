@@ -1,0 +1,94 @@
+policy_version: bank-image-safety-v1.2
+
+categories:
+  sexual_pornography:
+    severity: high
+    default_action: block
+    regulatory_rationale: Pornography and explicit sexual content are not acceptable in bank-owned channels.
+  sexual_minors:
+    severity: critical
+    default_action: block
+    regulatory_rationale: Sexualized minors are illegal and require fail-closed handling.
+  extremism_terrorism_symbols:
+    severity: critical
+    default_action: block
+    regulatory_rationale: Extremism, terrorism, and prohibited symbols create legal and reputational risk.
+  violence_cruelty_gore:
+    severity: high
+    default_action: block
+    regulatory_rationale: Graphic violence, cruelty, blood, and torture create user-safety and reputational risk.
+  self_harm_suicide:
+    severity: critical
+    default_action: block
+    regulatory_rationale: Self-harm and suicide content require fail-closed handling.
+  drugs_propaganda:
+    severity: high
+    default_action: block
+    regulatory_rationale: Drug-related promotion or depiction can create legal and reputational risk.
+  weapons_explosives_crime_instructions:
+    severity: critical
+    default_action: block
+    regulatory_rationale: Weapons, explosives, and criminal instructions can enable real-world harm.
+  fraud_phishing_social_engineering:
+    severity: critical
+    default_action: block
+    regulatory_rationale: Fraud, phishing, and social engineering are directly relevant to banking abuse.
+  fake_documents_cards_contracts:
+    severity: critical
+    default_action: block
+    regulatory_rationale: Fake documents, cards, certificates, and contracts can enable fraud.
+  personal_biometric_data:
+    severity: critical
+    default_action: block
+    regulatory_rationale: Personal and biometric data disclosure creates privacy and compliance risk.
+  misleading_financial_content:
+    severity: high
+    default_action: block
+    regulatory_rationale: Misleading financial content can harm clients and violate financial advertising rules.
+  market_investment_manipulation:
+    severity: high
+    default_action: block
+    regulatory_rationale: Investment manipulation and market abuse can create regulatory risk.
+  discrimination_hate_speech:
+    severity: high
+    default_action: block
+    regulatory_rationale: Discrimination and hate speech are unacceptable in bank channels.
+  political_agitation_symbols:
+    severity: medium
+    default_action: review
+    regulatory_rationale: Political agitation and disputed symbols require contextual legal review.
+  brand_ip_misuse:
+    severity: medium
+    default_action: review
+    regulatory_rationale: Unauthorized use of brands, logos, and intellectual property can create legal risk.
+  official_interface_impersonation:
+    severity: high
+    default_action: block
+    regulatory_rationale: Imitation of official interfaces or government bodies can enable deception.
+  bank_reputation_harm:
+    severity: medium
+    default_action: review
+    regulatory_rationale: Content defaming the bank, clients, or employees requires reputation review.
+  gambling_casino_quick_money:
+    severity: medium
+    default_action: review
+    regulatory_rationale: Gambling, betting, casinos, and quick-money claims can create compliance and reputation risk.
+  sanctions_military_geopolitical:
+    severity: medium
+    default_action: review
+    regulatory_rationale: Sanctions, military, and geopolitically risky content require contextual review.
+  fraudulent_qr_payment_push:
+    severity: critical
+    default_action: block
+    regulatory_rationale: Fraudulent QR codes, payment forms, and fake push notifications can enable payment fraud.
+
+prompt_keywords:
+  fraudulent_qr_payment_push:
+    - qr оплат
+    - qr код для оплаты
+    - мошеннический qr
+    - фейковое push уведомление
+  official_interface_impersonation:
+    - фейковый интерфейс банка
+    - имитация госуслуг
+    - поддельный сайт госоргана

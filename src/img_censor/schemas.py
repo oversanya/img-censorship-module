@@ -15,6 +15,16 @@ class GuardRequest:
     input_image: Optional[str] = None
     output_image: Optional[str] = None
     request_id: Optional[str] = None
+    scenario: Optional[str] = None
+
+    def to_audit_dict(self) -> Dict[str, Any]:
+        return {
+            "prompt": self.prompt,
+            "input_image": self.input_image,
+            "output_image": self.output_image,
+            "request_id": self.request_id,
+            "scenario": self.scenario,
+        }
 
 
 @dataclass
@@ -55,4 +65,3 @@ class GuardResult:
             "findings": [finding.to_dict() for finding in self.findings],
             "audit": self.audit,
         }
-

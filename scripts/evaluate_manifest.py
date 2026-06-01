@@ -8,7 +8,7 @@ from img_censor.pipeline import ImageCensorPipeline
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate censor pipeline on a CSV manifest.")
-    parser.add_argument("manifest", help="CSV with prompt,input_image,output_image,expected_verdict columns.")
+    parser.add_argument("manifest", help="CSV manifest with prompt/image fields, expected verdict, category, and stage.")
     parser.add_argument("--config", default="configs/pipeline.yaml")
     return parser.parse_args()
 
@@ -23,4 +23,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

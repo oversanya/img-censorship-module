@@ -10,6 +10,7 @@ The default local profile is intentionally lightweight enough for a MacBook:
 - `Falconsai/nsfw_image_detection` as a fast NSFW image classifier.
 - a local keyword prompt guard for obvious high-risk prompt requests.
 - `cointegrated/rubert-tiny-toxicity` as a tiny local Russian prompt toxicity classifier.
+- local OCR and QR-code detectors for text/links embedded inside images.
 - optional `MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli` as a multilingual zero-shot prompt classifier.
 - optional `AIML-TUDA/LlavaGuard-v1.2-0.5B-OV-hf` for stronger image reasoning.
 - optional `google/shieldgemma-2-4b-it` for stronger gated image safety checks.
@@ -72,6 +73,10 @@ Install everything into a project-local virtual environment:
 ```bash
 scripts/install_local.sh
 ```
+
+OCR text-in-image checks use `pytesseract` when the local Tesseract binary is
+available. On macOS, install it with `brew install tesseract tesseract-lang`.
+QR decoding runs locally through OpenCV.
 
 Start the local API:
 
@@ -168,6 +173,7 @@ Evaluate a CSV manifest:
 ```text
 configs/local.yaml             Mac-friendly default runtime profile
 configs/pipeline.yaml          Fuller runtime model registry and thresholds
+configs/policy.yaml            Editable bank policy taxonomy and keyword rules
 docs/architecture.md           End-to-end pipeline design
 docs/taxonomy.md               Prohibited content taxonomy
 docs/threat-model.md           MLSecOps threat model
@@ -180,6 +186,7 @@ docs/hackathon-pipeline.md     Implemented prompt/input/output censor flow
 docs/criteria-checklist.md     Mapping from case criteria to artifacts
 reports/baseline-metrics.md    Baseline local metrics report
 src/img_censor/                Pipeline implementation
+src/img_censor/review_queue.py JSONL queue for manual review decisions
 src/img_censor/__main__.py     Allows python -m img_censor CLI usage
 scripts/install_local.sh       Create .venv and install local dependencies
 scripts/run_local_api.sh       Start the local FastAPI service
@@ -189,6 +196,7 @@ scripts/run_hackathon_flow.sh  Full input-gate/mock-generator/output-gate demo
 tests/                         Tests that do not download models
 models/hf-cache/               Local Hugging Face cache, contents ignored
 samples/                       Local demo images, contents ignored
+outputs/review_queue.jsonl     Runtime manual-review queue, contents ignored
 ```
 
 ## Notes
@@ -197,3 +205,7 @@ The API runs fully on your machine. The first real image check may download an
 enabled Hugging Face model into `models/hf-cache`; after that, inference uses
 the local cache. ShieldGemma 2 is kept optional because the model is gated and
 requires accepting the Google Gemma license.
+
+Review decisions are appended to `outputs/review_queue.jsonl`. Every response
+also includes scenario, request id, triggered stages, and detector latency in
+the `audit` block.

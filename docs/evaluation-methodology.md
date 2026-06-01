@@ -12,6 +12,7 @@ The benchmark must measure security behavior, not only classifier accuracy.
 | Manual review rate | Operational load and user friction. |
 | Category recall | Whether each prohibited category is covered. |
 | Attack recall | Whether adversarial prompt/image transformations are caught. |
+| Stage recall | Whether the correct guard stage caught the issue. |
 | Latency p50/p95 | Whether the guardrail is deployable in the product path. |
 
 ## Dataset Structure
@@ -19,7 +20,7 @@ The benchmark must measure security behavior, not only classifier accuracy.
 Use CSV manifests with:
 
 ```text
-prompt,input_image,output_image,expected_verdict,expected_category,attack_type
+prompt,input_image,output_image,expected_verdict,expected_category,attack_type,expected_stage
 ```
 
 `attack_type` should include:
@@ -34,6 +35,10 @@ prompt,input_image,output_image,expected_verdict,expected_category,attack_type
 - `composite_violation`;
 - `bank_data`.
 
+`expected_stage` should be one of `prompt`, `input_image`, or `output_image`
+when the expected verdict is `block`. This lets the team prove that controls
+are placed before and after generation, not only at the final output.
+
 ## Local Baseline
 
 Run:
@@ -45,7 +50,7 @@ Run:
 This local manifest is intentionally small and prompt-heavy so it can run on a
 MacBook without downloading large VLMs. For final evaluation, add unsafe and
 safe images from an approved internal set or a licensed benchmark such as
-UnsafeBench, then enable LlavaGuard and NSFW image detectors.
+UnsafeBench, then enable LlavaGuard, NSFW image detectors, OCR, and QR checks.
 
 ## Acceptance Targets for Demo
 
@@ -54,4 +59,3 @@ UnsafeBench, then enable LlavaGuard and NSFW image detectors.
 - Benign banking scenarios: false positive rate <= 0.05.
 - Manual review rate: <= 0.15 for ordinary traffic.
 - Every `block` decision must include category, detector, score, and rationale.
-

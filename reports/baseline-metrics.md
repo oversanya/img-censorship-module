@@ -38,6 +38,9 @@ not a final regulatory validation dataset.
     "case_variation": 1.0,
     "explicit_prompt": 1.0,
     "spacing_obfuscation": 1.0
+  },
+  "stage_recall": {
+    "prompt": 1.0
   }
 }
 ```

@@ -17,7 +17,7 @@ against accidental unsafe outputs and active bypass attempts.
 2. `input image guard`
    - Checks uploaded images before img2img restyling or editing.
    - Prevents laundering unsafe content through a "style transfer" operation.
-   - Uses a fast NSFW classifier and LlavaGuard 0.5B.
+   - Uses a fast NSFW classifier, OCR, QR decoding, and optional LlavaGuard 0.5B.
 
 3. `generation service`
    - Treated as untrusted from the guardrail perspective.
@@ -33,6 +33,7 @@ against accidental unsafe outputs and active bypass attempts.
    - Applies high-severity fail-closed categories.
    - Emits audit data: detector versions, scores, rationale, thresholds, and
      model IDs.
+   - Sends `review` decisions into a JSONL review queue for human triage.
 
 ## Default Lightweight Model Stack
 
@@ -40,6 +41,8 @@ against accidental unsafe outputs and active bypass attempts.
 | --- | --- | --- | --- |
 | Prompt zero-shot | `MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli` | about 0.1B | Multilingual prompt risk classification |
 | Fast NSFW image | `Falconsai/nsfw_image_detection` | about 86M | Cheap explicit-content prefilter |
+| OCR text-in-image | `pytesseract` adapter | optional system dependency | Finds prohibited words, fake documents, and bank data rendered into images |
+| QR code | OpenCV `QRCodeDetector` | local CPU | Blocks payment/fraud surfaces hidden in QR payloads |
 | VLM safety judge | `AIML-TUDA/LlavaGuard-v1.2-0.5B-OV-hf` | about 0.9B params, 1.8GB weights | Policy-aware visual moderation with rationale |
 | Optional stronger judge | `google/shieldgemma-2-4b-it` | 4B, gated | Stronger image safety classifier for sexual, dangerous, violence |
 | Optional broad visual semantics | `openai/clip-vit-base-patch32` | about 151M | Zero-shot object/context hints |
@@ -66,4 +69,3 @@ they fail differently:
 For banking, false negatives are more expensive for high-severity categories,
 so the default policy biases toward blocking sexual exploitation, extremist
 content, self-harm instructions, and personal or financial data leakage.
-

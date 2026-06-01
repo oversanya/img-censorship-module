@@ -53,6 +53,8 @@ async def censor(
     prompt: Optional[str] = Form(default=None),
     input_image: Optional[UploadFile] = File(default=None),
     output_image: Optional[UploadFile] = File(default=None),
+    request_id: Optional[str] = Form(default=None),
+    scenario: Optional[str] = Form(default=None),
 ):
     input_path = await _save_upload(input_image) if input_image else None
     output_path = await _save_upload(output_image) if output_image else None
@@ -60,6 +62,8 @@ async def censor(
         prompt=prompt,
         input_image=input_path,
         output_image=output_path,
+        request_id=request_id,
+        scenario=scenario,
     )
     result = mock_check(request) if USE_MOCK else pipeline.check(request)
     return result.to_dict()
@@ -99,11 +103,18 @@ async def censor_full(
     generated_image: Optional[UploadFile] = File(default=None),
     request_id: Optional[str] = Form(default=None),
     use_mock_generator: bool = Form(default=True),
+    scenario: str = Form(default="text2image"),
 ):
     input_path = await _save_upload(input_image) if input_image else None
     generated_path = await _save_upload(generated_image) if generated_image else None
     if USE_MOCK:
-        request = GuardRequest(prompt=prompt, input_image=input_path, output_image=generated_path, request_id=request_id)
+        request = GuardRequest(
+            prompt=prompt,
+            input_image=input_path,
+            output_image=generated_path,
+            request_id=request_id,
+            scenario=scenario,
+        )
         return mock_check(request).to_dict()
     return service.full_flow(
         prompt=prompt,
@@ -111,6 +122,7 @@ async def censor_full(
         generated_image=generated_path,
         request_id=request_id,
         use_mock_generator=use_mock_generator,
+        scenario=scenario,
     )
 
 

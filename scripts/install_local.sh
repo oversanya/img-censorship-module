@@ -6,7 +6,7 @@ cd "$ROOT_DIR"
 
 python3 -m venv --system-site-packages .venv
 .venv/bin/python -m pip install -U pip setuptools wheel
-.venv/bin/python -m pip install -e ".[api,dev]"
+.venv/bin/python -m pip install -e ".[api,dev,image-text]"
 
 mkdir -p models/hf-cache samples outputs tmp
 
@@ -18,4 +18,7 @@ Start the API:
 
 Optional: pre-download enabled local models:
   .venv/bin/python scripts/download_models.py --config configs/local.yaml
+
+Optional OCR runtime on macOS:
+  brew install tesseract tesseract-lang
 EOF

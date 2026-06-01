@@ -23,6 +23,12 @@ def parse_args(argv: Optional[list] = None) -> argparse.Namespace:
         default="auto",
         help="Which censor stage to run.",
     )
+    parser.add_argument(
+        "--scenario",
+        choices=["text2image", "img2img_restyle", "img2img_edit", "prompt_only", "input_image_only", "output_image_only"],
+        default="text2image",
+        help="Business scenario for audit logs and full-flow routing.",
+    )
     parser.add_argument("--no-mock-generator", action="store_true", help="Disable mock generator in --stage full.")
     parser.add_argument("--interactive", action="store_true", help="Read prompts from terminal until exit.")
     parser.add_argument("--mock", action="store_true", help="Run without loading Hugging Face models.")
@@ -81,6 +87,7 @@ def run_stage(checker, config: dict, args: argparse.Namespace, prompt: Optional[
                 input_image=args.input_image,
                 output_image=args.output_image,
                 request_id=args.request_id,
+                scenario=args.scenario,
             )
         )
 
@@ -104,6 +111,7 @@ def run_stage(checker, config: dict, args: argparse.Namespace, prompt: Optional[
             generated_image=args.output_image,
             request_id=args.request_id,
             use_mock_generator=not args.no_mock_generator,
+            scenario=args.scenario,
         )
 
     return checker(
@@ -112,6 +120,7 @@ def run_stage(checker, config: dict, args: argparse.Namespace, prompt: Optional[
             input_image=args.input_image,
             output_image=args.output_image,
             request_id=args.request_id,
+            scenario=args.scenario,
         )
     )
 
@@ -140,6 +149,7 @@ def run_interactive(checker, args: argparse.Namespace) -> int:
             input_image=args.input_image,
             output_image=args.output_image,
             request_id=args.request_id,
+            scenario=args.scenario,
         )
         result = checker(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))

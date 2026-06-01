@@ -29,6 +29,13 @@ Tiny Russian text classifier for toxicity and inappropriate content. It is only
 ML-based prompt classifier. It complements the transparent keyword guard and
 does not replace the image safety layers.
 
+### OCR and QR local detectors
+
+OCR uses the `pytesseract` Python adapter when the Tesseract binary is installed
+locally. QR decoding uses OpenCV `QRCodeDetector`. These are not ML safety
+models, but they cover a practical bypass path: unsafe text, fake payment
+forms, QR links, and official-interface text rendered directly into an image.
+
 ## Optional Models
 
 ### `google/shieldgemma-2-4b-it`
@@ -47,7 +54,7 @@ experiments but should not be treated as a final safety verdict.
 Recommended order for local demos:
 
 1. Run `--mock` to validate API shape.
-2. Enable `prompt_keywords`, `prompt_toxicity`, and `nsfw_vit` (the local profile already does this).
+2. Enable `prompt_keywords`, `prompt_toxicity`, `nsfw_vit`, OCR, and QR checks (the local profile already does this).
 3. Enable LlavaGuard for final image checks.
 4. Keep ShieldGemma disabled unless the machine has enough RAM and HF gated
    access is configured.

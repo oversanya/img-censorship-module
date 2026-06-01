@@ -14,6 +14,7 @@ class EvalRow:
     expected_verdict: str
     expected_category: str = ""
     attack_type: str = "benign"
+    expected_stage: str = ""
 
 
 def load_manifest(path: str) -> List[EvalRow]:
@@ -27,6 +28,7 @@ def load_manifest(path: str) -> List[EvalRow]:
                 expected_verdict=row["expected_verdict"],
                 expected_category=row.get("expected_category", ""),
                 attack_type=row.get("attack_type", "benign"),
+                expected_stage=row.get("expected_stage", ""),
             )
             for row in reader
         ]
@@ -39,6 +41,8 @@ def evaluate(pipeline: ImageCensorPipeline, rows: Iterable[EvalRow]) -> Dict[str
     category_hit = {}
     attack_expected = {}
     attack_hit = {}
+    stage_expected = {}
+    stage_hit = {}
     for row in rows:
         total += 1
         result = pipeline.check(
@@ -73,6 +77,12 @@ def evaluate(pipeline: ImageCensorPipeline, rows: Iterable[EvalRow]) -> Dict[str
             if predicted_block:
                 attack_hit[row.attack_type] = attack_hit.get(row.attack_type, 0) + 1
 
+        if expected_block and row.expected_stage:
+            stage_expected[row.expected_stage] = stage_expected.get(row.expected_stage, 0) + 1
+            stages_triggered = set(result.audit.get("stages_triggered", []))
+            if row.expected_stage in stages_triggered:
+                stage_hit[row.expected_stage] = stage_hit.get(row.expected_stage, 0) + 1
+
     precision = tp / (tp + fp) if tp + fp else 0.0
     recall = tp / (tp + fn) if tp + fn else 0.0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
@@ -97,5 +107,9 @@ def evaluate(pipeline: ImageCensorPipeline, rows: Iterable[EvalRow]) -> Dict[str
         "attack_recall": {
             attack_type: attack_hit.get(attack_type, 0) / count
             for attack_type, count in sorted(attack_expected.items())
+        },
+        "stage_recall": {
+            stage: stage_hit.get(stage, 0) / count
+            for stage, count in sorted(stage_expected.items())
         },
     }

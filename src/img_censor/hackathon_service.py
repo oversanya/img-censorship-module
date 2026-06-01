@@ -10,21 +10,24 @@ class HackathonCensorService:
         self.pipeline = pipeline
 
     def check_prompt(self, prompt: str, request_id: Optional[str] = None) -> GuardResult:
-        return self.pipeline.check(GuardRequest(prompt=prompt, request_id=request_id))
+        return self.pipeline.check(GuardRequest(prompt=prompt, request_id=request_id, scenario="prompt_only"))
 
     def check_input_image(self, image_path: str, request_id: Optional[str] = None) -> GuardResult:
-        return self.pipeline.check(GuardRequest(input_image=image_path, request_id=request_id))
+        return self.pipeline.check(GuardRequest(input_image=image_path, request_id=request_id, scenario="input_image_only"))
 
     def check_output_image(self, image_path: str, request_id: Optional[str] = None) -> GuardResult:
-        return self.pipeline.check(GuardRequest(output_image=image_path, request_id=request_id))
+        return self.pipeline.check(GuardRequest(output_image=image_path, request_id=request_id, scenario="output_image_only"))
 
     def check_input_gate(
         self,
         prompt: Optional[str],
         input_image: Optional[str],
         request_id: Optional[str] = None,
+        scenario: Optional[str] = None,
     ) -> GuardResult:
-        return self.pipeline.check(GuardRequest(prompt=prompt, input_image=input_image, request_id=request_id))
+        return self.pipeline.check(
+            GuardRequest(prompt=prompt, input_image=input_image, request_id=request_id, scenario=scenario)
+        )
 
     def full_flow(
         self,
@@ -33,11 +36,18 @@ class HackathonCensorService:
         generated_image: Optional[str] = None,
         request_id: Optional[str] = None,
         use_mock_generator: bool = True,
+        scenario: str = "text2image",
     ) -> Dict:
-        input_gate = self.check_input_gate(prompt=prompt, input_image=input_image, request_id=request_id)
+        input_gate = self.check_input_gate(
+            prompt=prompt,
+            input_image=input_image,
+            request_id=request_id,
+            scenario=scenario,
+        )
         if input_gate.verdict != Verdict.ALLOW:
             return {
                 "verdict": input_gate.verdict.value,
+                "scenario": scenario,
                 "blocked_stage": "input_gate",
                 "reason": "Request was stopped before generation.",
                 "input_gate": input_gate.to_dict(),
@@ -59,6 +69,7 @@ class HackathonCensorService:
         if image_for_output_check is None:
             return {
                 "verdict": Verdict.REVIEW.value,
+                "scenario": scenario,
                 "blocked_stage": "generation",
                 "reason": "No generated image was supplied and mock generation is disabled.",
                 "input_gate": input_gate.to_dict(),
@@ -66,13 +77,15 @@ class HackathonCensorService:
                 "output_gate": None,
             }
 
-        output_gate = self.check_output_image(image_for_output_check, request_id=request_id)
+        output_gate = self.pipeline.check(
+            GuardRequest(output_image=image_for_output_check, request_id=request_id, scenario=scenario)
+        )
         return {
             "verdict": output_gate.verdict.value,
+            "scenario": scenario,
             "blocked_stage": None if output_gate.verdict == Verdict.ALLOW else "output_gate",
             "reason": "Generated image passed output censor." if output_gate.verdict == Verdict.ALLOW else output_gate.rationale,
             "input_gate": input_gate.to_dict(),
             "generation": generation,
             "output_gate": output_gate.to_dict(),
         }
-

@@ -5,7 +5,9 @@ the censor independent from the generator and shows all required controls:
 
 - input text censor;
 - input image censor for img2img;
-- output image censor after generation.
+- output image censor after generation;
+- audit trail with detector latency, policy version, request id, and scenario;
+- manual-review JSONL queue for medium-confidence findings.
 
 ## Block Scheme
 
@@ -16,7 +18,7 @@ flowchart TD
     A --> P["Prompt Censor<br/>/v1/censor/prompt<br/>keyword guard + local prompt ML"]
     A --> Q{"img2img input image?"}
 
-    Q -->|yes| I["Input Image Censor<br/>/v1/censor/input-image<br/>NSFW + optional VLM/OCR"]
+    Q -->|yes| I["Input Image Censor<br/>/v1/censor/input-image<br/>NSFW + OCR + QR + optional VLM"]
     Q -->|no| G1["Input Gate Aggregator"]
 
     P --> G1
@@ -26,11 +28,11 @@ flowchart TD
     G1 -->|review| R1["Manual review / safe refusal"]
     G1 -->|allow| GEN["Generator adapter<br/>mock generator in hackathon<br/>real text2image/img2img in prod"]
 
-    GEN --> O["Output Image Censor<br/>/v1/censor/output-image<br/>checks generated image"]
+    GEN --> O["Output Image Censor<br/>/v1/censor/output-image<br/>NSFW + OCR + QR + optional VLM"]
     O --> G2["Final Aggregator"]
 
     G2 -->|allow| OK["Return generated image"]
-    G2 -->|review| R2["Manual review"]
+    G2 -->|review| R2["Manual review<br/>outputs/review_queue.jsonl"]
     G2 -->|block| B2["Do not return generated image"]
 
     G1 --> L["Audit Log"]
@@ -52,8 +54,11 @@ flowchart TD
 For the hackathon, the module defaults to local models:
 
 - prompt rules from `src/img_censor/policy.py`;
+- editable bank taxonomy and keyword extensions from `configs/policy.yaml`;
 - local prompt ML classifier `cointegrated/rubert-tiny-toxicity`;
 - local image classifier `Falconsai/nsfw_image_detection`;
+- local OCR detector via optional `pytesseract` when installed;
+- local QR detector via `opencv-python`;
 - optional local VLM `AIML-TUDA/LlavaGuard-v1.2-0.5B-OV-hf`;
 - optional gated model `google/shieldgemma-2-4b-it`.
 
@@ -83,3 +88,11 @@ scripts/run_local_api.sh
 curl -X POST http://127.0.0.1:8000/v1/censor/full -F 'prompt=Сгенерируй фото машины'
 ```
 
+For img2img restyling or editing, pass the business scenario explicitly:
+
+```bash
+.venv/bin/img-censor --config configs/local.yaml --stage full \
+  --scenario img2img_restyle \
+  --prompt "Смени стиль на акварель" \
+  --input-image ./samples/input.png
+```

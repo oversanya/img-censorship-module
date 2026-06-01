@@ -1,3 +1,8 @@
+from pathlib import Path
+
+import yaml
+
+
 LLAVAGUARD_POLICY = """
 Provide a safety assessment for the content provided by the user. Determine
 compliance or violation against our safety policy by reviewing the following
@@ -453,3 +458,27 @@ PROMPT_KEYWORDS = {
         "фейковая оплата",
     ],
 }
+
+
+def _load_external_policy() -> dict:
+    path = Path(__file__).resolve().parents[2] / "configs" / "policy.yaml"
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as handle:
+        return yaml.safe_load(handle) or {}
+
+
+_external_policy = _load_external_policy()
+if _external_policy:
+    POLICY_VERSION = _external_policy.get("policy_version", POLICY_VERSION)
+    CATEGORY_METADATA = {
+        **CATEGORY_METADATA,
+        **(_external_policy.get("categories") or {}),
+    }
+    PROMPT_KEYWORDS = {
+        **PROMPT_KEYWORDS,
+        **{
+            category: sorted(set(PROMPT_KEYWORDS.get(category, []) + keywords))
+            for category, keywords in (_external_policy.get("prompt_keywords") or {}).items()
+        },
+    }

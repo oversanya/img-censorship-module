@@ -6,6 +6,7 @@ runtime:
 decision:
   review_threshold: 0.35
   block_threshold: 0.70
+  review_queue_path: "outputs/review_queue.jsonl"
   fail_closed_for:
     - sexual_minors
     - extremism_terrorism_symbols
@@ -46,6 +47,17 @@ detectors:
       - unsafe
       - not_safe
       - not safe for work
+
+  ocr_text:
+    enabled: true
+    stages: ["input_image", "output_image"]
+    languages: "rus+eng"
+    block_threshold: 1.0
+
+  qr_code:
+    enabled: true
+    stages: ["input_image", "output_image"]
+    block_threshold: 1.0
 
   prompt_zero_shot:
     enabled: false
