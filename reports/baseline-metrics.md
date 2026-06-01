@@ -28,9 +28,10 @@ not a final regulatory validation dataset.
   "false_positive_rate": 0.0,
   "manual_review_rate": 0.0,
   "category_recall": {
-    "dangerous": 1.0,
-    "hate_extremism": 1.0,
-    "personal_financial_data": 1.0
+    "drugs_propaganda": 1.0,
+    "extremism_terrorism_symbols": 1.0,
+    "personal_biometric_data": 1.0,
+    "weapons_explosives_crime_instructions": 1.0
   },
   "attack_recall": {
     "bank_data": 1.0,

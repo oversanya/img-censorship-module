@@ -8,10 +8,17 @@ decision:
   block_threshold: 0.70
   fail_closed_for:
     - sexual_minors
+    - extremism_terrorism_symbols
     - hate_extremism
     - terrorism_extremism
     - self_harm_instruction
+    - self_harm_suicide
+    - weapons_explosives_crime_instructions
+    - fraud_phishing_social_engineering
+    - fake_documents_cards_contracts
     - personal_financial_data
+    - personal_biometric_data
+    - fraudulent_qr_payment_push
   conflict_policy: review
 
 detectors:
@@ -24,6 +31,7 @@ detectors:
     enabled: true
     stages: ["prompt"]
     model_id: "cointegrated/rubert-tiny-toxicity"
+    local_files_only: true
     review_threshold: 0.50
     block_threshold: 0.80
 

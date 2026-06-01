@@ -20,8 +20,23 @@ class PromptToxicityDetector(Detector):
 
             model_id = self.config["model_id"]
             cache_dir = self.runtime_config.get("cache_dir")
-            self._tokenizer = AutoTokenizer.from_pretrained(model_id, cache_dir=cache_dir)
-            self._model = AutoModelForSequenceClassification.from_pretrained(model_id, cache_dir=cache_dir).eval()
+            local_files_only = bool(self.config.get("local_files_only", True))
+            try:
+                self._tokenizer = AutoTokenizer.from_pretrained(
+                    model_id,
+                    cache_dir=cache_dir,
+                    local_files_only=local_files_only,
+                )
+                self._model = AutoModelForSequenceClassification.from_pretrained(
+                    model_id,
+                    cache_dir=cache_dir,
+                    local_files_only=local_files_only,
+                ).eval()
+            except OSError as error:
+                raise RuntimeError(
+                    f"Prompt model {model_id} is not available locally. "
+                    "Run scripts/download_prompt_model.sh first or set local_files_only: false in config."
+                ) from error
             if torch.backends.mps.is_available():
                 self._device = "mps"
             elif torch.cuda.is_available():
