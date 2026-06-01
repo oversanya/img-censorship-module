@@ -110,6 +110,12 @@ docs/architecture.md           End-to-end pipeline design
 docs/taxonomy.md               Prohibited content taxonomy
 docs/threat-model.md           MLSecOps threat model
 docs/model-selection.md        Lightweight model choices for MacBook M4
+docs/model-review.md           Open detector review and tradeoffs
+docs/evaluation-methodology.md Metrics and benchmark plan
+docs/unresolved-risks.md       Remaining production hardening risks
+docs/demo-script.md            Demo flow for the defense
+docs/criteria-checklist.md     Mapping from case criteria to artifacts
+reports/baseline-metrics.md    Baseline local metrics report
 src/img_censor/                Pipeline implementation
 src/img_censor/__main__.py     Allows python -m img_censor CLI usage
 scripts/install_local.sh       Create .venv and install local dependencies

@@ -8,6 +8,7 @@ decision:
   block_threshold: 0.70
   fail_closed_for:
     - sexual_minors
+    - hate_extremism
     - terrorism_extremism
     - self_harm_instruction
     - personal_financial_data

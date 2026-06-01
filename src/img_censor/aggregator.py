@@ -1,5 +1,6 @@
 from typing import Dict, List
 
+from img_censor.policy import CATEGORY_METADATA, POLICY_VERSION
 from img_censor.schemas import Finding, GuardResult, Verdict
 
 
@@ -14,13 +15,21 @@ def aggregate(findings: List[Finding], decision_config: Dict) -> GuardResult:
     fail_closed = set(decision_config.get("fail_closed_for", []))
 
     categories = sorted({finding.category for finding in findings if finding.category != "none"})
+    category_evidence = {
+        category: CATEGORY_METADATA.get(category, {"severity": "unknown", "default_action": "review"})
+        for category in categories
+    }
     if not findings:
         return GuardResult(
             verdict=Verdict.ALLOW,
             categories=[],
             rationale="No detector reported a policy violation above review threshold.",
             findings=[],
-            audit={"decision_rule": "no_findings"},
+            audit={
+                "policy_version": POLICY_VERSION,
+                "decision_rule": "no_findings",
+                "category_evidence": {},
+            },
         )
 
     final_verdict = max((finding.verdict for finding in findings), key=lambda value: VERDICT_ORDER[value])
@@ -41,8 +50,11 @@ def aggregate(findings: List[Finding], decision_config: Dict) -> GuardResult:
         findings=findings,
         audit={
             "decision_rule": "max_detector_verdict_with_fail_closed_override",
+            "policy_version": POLICY_VERSION,
             "fail_closed_for": sorted(fail_closed),
             "finding_count": len(findings),
+            "category_evidence": category_evidence,
+            "detectors_triggered": sorted({finding.detector for finding in findings}),
+            "stages_triggered": sorted({finding.stage for finding in findings}),
         },
     )
-

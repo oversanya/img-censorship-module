@@ -68,6 +68,73 @@ LLAVAGUARD_CATEGORY_MAP = {
 }
 
 
+POLICY_VERSION = "bank-image-safety-v1.0"
+
+
+CATEGORY_METADATA = {
+    "sexual": {
+        "severity": "high",
+        "default_action": "block",
+        "regulatory_rationale": "Pornographic or explicit sexual imagery is not acceptable in bank-owned channels.",
+    },
+    "sexual_minors": {
+        "severity": "critical",
+        "default_action": "block",
+        "regulatory_rationale": "Sexualized minors are illegal and require fail-closed handling.",
+    },
+    "nudity_contextual": {
+        "severity": "medium",
+        "default_action": "review",
+        "regulatory_rationale": "Nudity can be legitimate in medical, educational, or artistic context.",
+    },
+    "violence_gore": {
+        "severity": "high",
+        "default_action": "block",
+        "regulatory_rationale": "Graphic violence and gore create reputational and user-safety risk.",
+    },
+    "violence_contextual": {
+        "severity": "medium",
+        "default_action": "review",
+        "regulatory_rationale": "Non-graphic weapons or violence can require contextual interpretation.",
+    },
+    "dangerous": {
+        "severity": "high",
+        "default_action": "block",
+        "regulatory_rationale": "Weapons, explosives, drugs, terrorism, and self-harm content can enable real-world harm.",
+    },
+    "self_harm_instruction": {
+        "severity": "critical",
+        "default_action": "block",
+        "regulatory_rationale": "Actionable self-harm instructions require fail-closed handling.",
+    },
+    "hate_extremism": {
+        "severity": "high",
+        "default_action": "block",
+        "regulatory_rationale": "Hate and extremist symbolism are unacceptable for bank distribution.",
+    },
+    "criminal_financial": {
+        "severity": "high",
+        "default_action": "block",
+        "regulatory_rationale": "Fraud and criminal planning are directly relevant to banking risk.",
+    },
+    "personal_financial_data": {
+        "severity": "critical",
+        "default_action": "block",
+        "regulatory_rationale": "Personal and financial data disclosure creates privacy and compliance risk.",
+    },
+    "brand_reputation": {
+        "severity": "medium",
+        "default_action": "review",
+        "regulatory_rationale": "Unsafe use of bank branding can require manual legal or brand review.",
+    },
+    "composite_violation": {
+        "severity": "medium",
+        "default_action": "review",
+        "regulatory_rationale": "Prompt, input image, and output image may jointly violate policy.",
+    },
+}
+
+
 PROMPT_KEYWORDS = {
     "sexual": [
         "porn",
@@ -97,6 +164,14 @@ PROMPT_KEYWORDS = {
         "наркотик",
         "наркоту",
         "запрещенные вещества",
+        "марихуан",
+        "кокаин",
+        "героин",
+        "метамфетамин",
+        "суицид",
+        "самоубийств",
+        "как вскрыть банкомат",
+        "ограбить банк",
     ],
     "hate_extremism": [
         "nazi propaganda",
@@ -110,6 +185,7 @@ PROMPT_KEYWORDS = {
         "свастик",
         "нацистский символ",
         "символ сс",
+        "зиг хайль",
     ],
     "personal_financial_data": [
         "card number",
@@ -118,5 +194,9 @@ PROMPT_KEYWORDS = {
         "номер карты",
         "паспортные данные",
         "номер счета",
+        "cvv",
+        "cvc",
+        "снилс",
+        "инн",
     ],
 }
