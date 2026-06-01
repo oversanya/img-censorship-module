@@ -33,6 +33,38 @@ The censor module must run as an independent service in front of and behind the
 generator. The generator is not trusted to make policy decisions about its own
 outputs.
 
+## Hackathon Flow
+
+The demo implementation exposes the three required censor stages separately and
+also provides a full guarded flow with a mock generator:
+
+```mermaid
+flowchart TD
+    P["Prompt"] --> PC["/v1/censor/prompt<br/>Prompt Censor"]
+    I["Input image for img2img"] --> IC["/v1/censor/input-image<br/>Input Image Censor"]
+    PC --> AG["Input Gate Aggregator"]
+    IC --> AG
+    AG -->|block/review| STOP["Stop before generation"]
+    AG -->|allow| GEN["Generator<br/>mock in hackathon mode"]
+    GEN --> OC["/v1/censor/output-image<br/>Output Image Censor"]
+    OC --> FINAL["Final allow/review/block"]
+    FINAL --> AUDIT["Audit trail"]
+```
+
+Run the full local demo flow:
+
+```bash
+scripts/run_hackathon_flow.sh "Сгенерируй фото машины"
+```
+
+Run only one stage:
+
+```bash
+.venv/bin/img-censor --config configs/local.yaml --stage prompt --prompt "Нарисуй свастику"
+.venv/bin/img-censor --config configs/local.yaml --stage input-image --input-image ./samples/input.png
+.venv/bin/img-censor --config configs/local.yaml --stage output-image --output-image ./samples/generated.png
+```
+
 ## Quick Start
 
 Install everything into a project-local virtual environment:
@@ -64,6 +96,16 @@ Run a prompt check from the terminal:
 ```bash
 curl -X POST http://127.0.0.1:8000/v1/censor \
   -F 'prompt=make a realistic promo image for a bank card'
+```
+
+Or call separate hackathon endpoints:
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/censor/prompt \
+  -F 'prompt=Нарисуй свастику'
+
+curl -X POST http://127.0.0.1:8000/v1/censor/full \
+  -F 'prompt=Сгенерируй фото машины'
 ```
 
 Run an image check from the terminal:
@@ -134,6 +176,7 @@ docs/model-review.md           Open detector review and tradeoffs
 docs/evaluation-methodology.md Metrics and benchmark plan
 docs/unresolved-risks.md       Remaining production hardening risks
 docs/demo-script.md            Demo flow for the defense
+docs/hackathon-pipeline.md     Implemented prompt/input/output censor flow
 docs/criteria-checklist.md     Mapping from case criteria to artifacts
 reports/baseline-metrics.md    Baseline local metrics report
 src/img_censor/                Pipeline implementation
@@ -142,6 +185,7 @@ scripts/install_local.sh       Create .venv and install local dependencies
 scripts/run_local_api.sh       Start the local FastAPI service
 scripts/censor_prompt.sh       Prompt-in-terminal censor runner
 scripts/download_prompt_model.sh Download the local prompt classifier
+scripts/run_hackathon_flow.sh  Full input-gate/mock-generator/output-gate demo
 tests/                         Tests that do not download models
 models/hf-cache/               Local Hugging Face cache, contents ignored
 samples/                       Local demo images, contents ignored

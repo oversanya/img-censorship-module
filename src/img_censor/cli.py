@@ -4,6 +4,7 @@ import sys
 from typing import Optional
 
 from img_censor.config import load_config
+from img_censor.hackathon_service import HackathonCensorService
 from img_censor.mock import mock_check
 from img_censor.pipeline import ImageCensorPipeline
 from img_censor.schemas import GuardRequest
@@ -16,6 +17,13 @@ def parse_args(argv: Optional[list] = None) -> argparse.Namespace:
     parser.add_argument("--input-image", default=None, help="Input image path or URL for img2img.")
     parser.add_argument("--output-image", default=None, help="Generated output image path or URL.")
     parser.add_argument("--request-id", default=None, help="Optional external request id for audit logs.")
+    parser.add_argument(
+        "--stage",
+        choices=["auto", "prompt", "input-image", "output-image", "full"],
+        default="auto",
+        help="Which censor stage to run.",
+    )
+    parser.add_argument("--no-mock-generator", action="store_true", help="Disable mock generator in --stage full.")
     parser.add_argument("--interactive", action="store_true", help="Read prompts from terminal until exit.")
     parser.add_argument("--mock", action="store_true", help="Run without loading Hugging Face models.")
     parser.add_argument("--describe", action="store_true", help="Print configured detectors and exit.")
@@ -51,16 +59,10 @@ def main(argv: Optional[list] = None) -> int:
     if prompt is None and not args.input_image and not args.output_image:
         prompt = read_prompt_once()
 
-    request = GuardRequest(
-        prompt=prompt,
-        input_image=args.input_image,
-        output_image=args.output_image,
-        request_id=args.request_id,
-    )
-
-    result = checker(request)
-
-    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+    result = run_stage(checker, config, args, prompt)
+    if hasattr(result, "to_dict"):
+        result = result.to_dict()
+    print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -69,6 +71,49 @@ def build_checker(config: dict, use_mock: bool):
         return mock_check
     pipeline = ImageCensorPipeline(config)
     return pipeline.check
+
+
+def run_stage(checker, config: dict, args: argparse.Namespace, prompt: Optional[str]):
+    if args.mock:
+        return checker(
+            GuardRequest(
+                prompt=prompt,
+                input_image=args.input_image,
+                output_image=args.output_image,
+                request_id=args.request_id,
+            )
+        )
+
+    service = HackathonCensorService(ImageCensorPipeline(config))
+    if args.stage == "prompt":
+        if prompt is None:
+            prompt = read_prompt_once()
+        return service.check_prompt(prompt, request_id=args.request_id)
+    if args.stage == "input-image":
+        if not args.input_image:
+            raise SystemExit("--input-image is required for --stage input-image")
+        return service.check_input_image(args.input_image, request_id=args.request_id)
+    if args.stage == "output-image":
+        if not args.output_image:
+            raise SystemExit("--output-image is required for --stage output-image")
+        return service.check_output_image(args.output_image, request_id=args.request_id)
+    if args.stage == "full":
+        return service.full_flow(
+            prompt=prompt,
+            input_image=args.input_image,
+            generated_image=args.output_image,
+            request_id=args.request_id,
+            use_mock_generator=not args.no_mock_generator,
+        )
+
+    return checker(
+        GuardRequest(
+            prompt=prompt,
+            input_image=args.input_image,
+            output_image=args.output_image,
+            request_id=args.request_id,
+        )
+    )
 
 
 def read_prompt_once() -> str:

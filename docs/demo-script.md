@@ -58,6 +58,19 @@ scripts/run_local_api.sh
 curl -X POST http://127.0.0.1:8000/v1/censor -F 'prompt=Сгенерируй фото машины'
 ```
 
+Separate stage endpoints:
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/censor/prompt -F 'prompt=Нарисуй свастику'
+curl -X POST http://127.0.0.1:8000/v1/censor/full -F 'prompt=Сгенерируй фото машины'
+```
+
+CLI full-flow demo:
+
+```bash
+scripts/run_hackathon_flow.sh "Сгенерируй фото машины"
+```
+
 ## 4. Metrics Demo
 
 ```bash
