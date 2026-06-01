@@ -7,11 +7,15 @@ __pycache__/
 .ruff_cache/
 *.egg-info/
 
-models/
+models/*
+!models/hf-cache/
+models/hf-cache/*
+!models/hf-cache/.gitkeep
 *.safetensors
 *.bin
 *.onnx
 
 tmp/
 outputs/
-samples/
+samples/*
+!samples/.gitkeep

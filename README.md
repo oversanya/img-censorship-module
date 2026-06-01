@@ -83,6 +83,8 @@ docs/threat-model.md           MLSecOps threat model
 docs/model-selection.md        Lightweight model choices for MacBook M4
 src/img_censor/                Pipeline implementation
 tests/                         Tests that do not download models
+models/hf-cache/               Local Hugging Face cache, contents ignored
+samples/                       Local demo images, contents ignored
 ```
 
 ## Notes
