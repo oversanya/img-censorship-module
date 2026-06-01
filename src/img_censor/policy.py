@@ -112,6 +112,11 @@ CATEGORY_METADATA = {
         "default_action": "block",
         "regulatory_rationale": "Hate and extremist symbolism are unacceptable for bank distribution.",
     },
+    "toxic_inappropriate": {
+        "severity": "medium",
+        "default_action": "review",
+        "regulatory_rationale": "Toxic or inappropriate prompt text can harm user trust and brand reputation.",
+    },
     "criminal_financial": {
         "severity": "high",
         "default_action": "block",

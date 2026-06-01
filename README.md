@@ -9,6 +9,8 @@ The default local profile is intentionally lightweight enough for a MacBook:
 
 - `Falconsai/nsfw_image_detection` as a fast NSFW image classifier.
 - a local keyword prompt guard for obvious high-risk prompt requests.
+- `cointegrated/rubert-tiny-toxicity` as a tiny local Russian prompt toxicity classifier.
+- optional `MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli` as a multilingual zero-shot prompt classifier.
 - optional `AIML-TUDA/LlavaGuard-v1.2-0.5B-OV-hf` for stronger image reasoning.
 - optional `google/shieldgemma-2-4b-it` for stronger gated image safety checks.
 
@@ -95,6 +97,12 @@ Pre-download enabled local models:
 .venv/bin/python scripts/download_models.py --config configs/local.yaml
 ```
 
+Pre-download only the local prompt classification model:
+
+```bash
+scripts/download_prompt_model.sh
+```
+
 Use the fuller local model profile:
 
 ```bash
@@ -133,6 +141,7 @@ src/img_censor/__main__.py     Allows python -m img_censor CLI usage
 scripts/install_local.sh       Create .venv and install local dependencies
 scripts/run_local_api.sh       Start the local FastAPI service
 scripts/censor_prompt.sh       Prompt-in-terminal censor runner
+scripts/download_prompt_model.sh Download the local prompt classifier
 tests/                         Tests that do not download models
 models/hf-cache/               Local Hugging Face cache, contents ignored
 samples/                       Local demo images, contents ignored

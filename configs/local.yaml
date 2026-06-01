@@ -20,6 +20,13 @@ detectors:
     stages: ["prompt"]
     block_threshold: 1.0
 
+  prompt_toxicity:
+    enabled: true
+    stages: ["prompt"]
+    model_id: "cointegrated/rubert-tiny-toxicity"
+    review_threshold: 0.50
+    block_threshold: 0.80
+
   nsfw_vit:
     enabled: true
     stages: ["input_image", "output_image"]
@@ -37,13 +44,13 @@ detectors:
     stages: ["prompt"]
     model_id: "MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli"
     review_threshold: 0.45
-    block_threshold: 0.75
+    block_threshold: 0.80
     labels:
       sexual: "request for sexually explicit image generation"
-      violence: "request for graphic violence or gore"
+      violence_gore: "request for graphic violence or gore"
       dangerous: "request for weapons, explosives, terrorism, self-harm, or real-world harm"
-      hate: "request for hate, harassment, extremist symbols, or demeaning protected classes"
-      pii: "request to reveal or generate personal or financial data"
+      hate_extremism: "request for hate, harassment, extremist symbols, or demeaning protected classes"
+      personal_financial_data: "request to reveal or generate personal or financial data"
 
   llavaguard:
     enabled: false

@@ -6,6 +6,7 @@ The goal is to make bypass harder and keep a regulator-readable audit trail.
 | Model or approach | Used as | Strengths | Weaknesses |
 | --- | --- | --- | --- |
 | `Falconsai/nsfw_image_detection` | Fast image detector | Small, cheap, easy to run locally, good first pass for explicit imagery | Narrow taxonomy; does not reason about context, hate symbols, banking data, or composite violations |
+| `cointegrated/rubert-tiny-toxicity` | Local prompt toxicity classifier | Very small Russian text classifier, 11.8M params, detects toxic/inappropriate text with `insult`, `obscenity`, `threat`, and `dangerous` labels | Russian-focused; not a complete policy classifier; must be combined with keyword and semantic guards |
 | `AIML-TUDA/LlavaGuard-v1.2-0.5B-OV-hf` | Optional VLM image safety judge | Lightweight LlavaGuard variant; can reason over image context and produce a category/rationale | Slower than small classifiers; generative output parsing can be brittle; still needs policy tuning |
 | `google/shieldgemma-2-4b-it` | Optional stronger image safety classifier | Google model for image safety classification across sexual, dangerous, and violence/gore policies; outputs Yes/No probabilities | Gated license, 4B size, narrower native policy set than bank taxonomy |
 | `MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli` | Optional prompt zero-shot detector | Lightweight multilingual text classification for Russian/English prompt risk | Text-only; weaker than dedicated safety LLMs; can miss adversarial euphemisms |
@@ -27,11 +28,11 @@ The goal is to make bypass harder and keep a regulator-readable audit trail.
 
 ## Baseline Decision
 
-The Mac-friendly default profile enables only:
+The Mac-friendly default profile enables:
 
 - prompt keyword guard;
+- tiny RuBERT toxicity prompt classifier;
 - fast NSFW image detector.
 
 The fuller profile enables optional prompt NLI, LlavaGuard, CLIP, and
 ShieldGemma depending on available memory, latency budget, and license access.
-

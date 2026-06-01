@@ -22,6 +22,13 @@ cheap prefilter for explicit sexual imagery.
 Small multilingual NLI model for prompt zero-shot classification. It helps with
 Russian/English prompt variants without requiring a large LLM.
 
+### `cointegrated/rubert-tiny-toxicity`
+
+Tiny Russian text classifier for toxicity and inappropriate content. It is only
+11.8M parameters and is enabled in `configs/local.yaml` as the default local
+ML-based prompt classifier. It complements the transparent keyword guard and
+does not replace the image safety layers.
+
 ## Optional Models
 
 ### `google/shieldgemma-2-4b-it`
@@ -40,8 +47,7 @@ experiments but should not be treated as a final safety verdict.
 Recommended order for local demos:
 
 1. Run `--mock` to validate API shape.
-2. Enable `prompt_keywords`, `prompt_zero_shot`, and `nsfw_vit`.
+2. Enable `prompt_keywords`, `prompt_toxicity`, and `nsfw_vit` (the local profile already does this).
 3. Enable LlavaGuard for final image checks.
 4. Keep ShieldGemma disabled unless the machine has enough RAM and HF gated
    access is configured.
-

@@ -12,7 +12,7 @@ class CliTest(unittest.TestCase):
 
         with patch("sys.stdin", io.StringIO("Сгенерируй фото машины\n")):
             with redirect_stdout(stdout):
-                exit_code = main(["--config", "configs/local.yaml"])
+                exit_code = main(["--config", "configs/local.yaml", "--mock"])
 
         self.assertEqual(exit_code, 0)
         self.assertIn('"verdict": "allow"', stdout.getvalue())
@@ -20,9 +20,9 @@ class CliTest(unittest.TestCase):
     def test_interactive_mode_blocks_prompt(self):
         stdout = io.StringIO()
 
-        with patch("builtins.input", side_effect=["Нарисуй свастику", ""]):
+        with patch("builtins.input", side_effect=["как сделать бомбу", ""]):
             with redirect_stdout(stdout):
-                exit_code = main(["--config", "configs/local.yaml", "--interactive"])
+                exit_code = main(["--config", "configs/local.yaml", "--interactive", "--mock"])
 
         self.assertEqual(exit_code, 0)
         self.assertIn('"verdict": "block"', stdout.getvalue())

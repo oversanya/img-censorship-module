@@ -6,6 +6,7 @@ from img_censor.detectors import (
     LlavaGuardDetector,
     NsfwVitDetector,
     PromptKeywordGuard,
+    PromptToxicityDetector,
     PromptZeroShotDetector,
     ShieldGemmaDetector,
 )
@@ -14,6 +15,7 @@ from img_censor.schemas import Finding, GuardRequest, GuardResult
 
 DETECTOR_CLASSES = {
     "prompt_keywords": PromptKeywordGuard,
+    "prompt_toxicity": PromptToxicityDetector,
     "prompt_zero_shot": PromptZeroShotDetector,
     "nsfw_vit": NsfwVitDetector,
     "llavaguard": LlavaGuardDetector,
@@ -57,4 +59,3 @@ class ImageCensorPipeline:
             ],
             "decision": self.decision_config,
         }
-

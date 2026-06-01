@@ -13,6 +13,12 @@ The generator never approves itself.
 
 ## 2. Prompt Demo
 
+Download the local prompt classifier once:
+
+```bash
+scripts/download_prompt_model.sh
+```
+
 Safe prompt:
 
 ```bash
@@ -59,4 +65,3 @@ curl -X POST http://127.0.0.1:8000/v1/censor -F 'prompt=Сгенерируй ф�
 ```
 
 Show precision, recall, false positive rate, category recall, and attack recall.
-

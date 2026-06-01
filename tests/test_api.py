@@ -15,9 +15,11 @@ class ApiTest(unittest.TestCase):
 
     def test_prompt_only_censor_allows_safe_prompt(self):
         from fastapi.testclient import TestClient
-        from img_censor.api import app
+        from img_censor import api
 
-        response = TestClient(app).post(
+        api.USE_MOCK = True
+
+        response = TestClient(api.app).post(
             "/v1/censor",
             data={"prompt": "Сгенерируй фото машины"},
         )
