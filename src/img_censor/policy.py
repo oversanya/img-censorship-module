@@ -94,8 +94,15 @@ PROMPT_KEYWORDS = {
     "hate_extremism": [
         "nazi propaganda",
         "terrorist poster",
+        "draw a swastika",
+        "swastika",
+        "nazi symbol",
+        "ss symbol",
         "экстремистский плакат",
         "нацистская пропаганда",
+        "свастик",
+        "нацистский символ",
+        "символ сс",
     ],
     "personal_financial_data": [
         "card number",
@@ -106,4 +113,3 @@ PROMPT_KEYWORDS = {
         "номер счета",
     ],
 }
-
