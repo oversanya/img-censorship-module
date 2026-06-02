@@ -1,0 +1,58 @@
+image_classifiers:
+  shieldgemma2:
+    hf_id: "google/shieldgemma-2-4b-it"
+    type: "vision_lm"
+    categories: [sexual_explicit, violence_gore, extremism]
+    latency_target_ms: 400   # ~400ms on MPS
+    requires_gpu: false      # works on MPS (Apple Silicon)
+    torch_dtype: "bfloat16"  # bfloat16 required: float16 causes NaN in PaliGemma-2 attention
+    size_gb: 8.5
+
+  nudenet:
+    pip_package: "nudenet"
+    type: "detector"
+    categories: [sexual_explicit]
+    latency_target_ms: 50
+    requires_gpu: false
+
+  q16:
+    hf_id: "Falconsai/nsfw_image_detection"   # ViT-based, ~330MB, no auth required
+    type: "clip_classifier"
+    categories: [sexual_explicit, violence_gore, hate_speech]
+    latency_target_ms: 80
+    requires_gpu: false
+    size_gb: 0.33
+
+image_reasoners:
+  llavaguard:
+    # AIML-TUDA/LlavaGuard-v1.2-0.5B-OV requires SGLang (not HF transformers).
+    # Use LlavaGuard-v1.2-0.5B-OV-HF for transformers-compatible inference.
+    hf_id: "AIML-TUDA/LlavaGuard-v1.2-0.5B-OV-HF"
+    type: "vision_lm"
+    categories: all
+    latency_target_ms: 300
+    provides_rationale: true
+    requires_gpu: false
+    torch_dtype: "float16"
+    size_gb: 1.0
+
+  shieldgemma2_reason:
+    hf_id: "google/shieldgemma-2-4b-it"
+    type: "vision_lm_reason"
+    provides_rationale: true
+    requires_gpu: false
+    torch_dtype: "bfloat16"  # bfloat16 required: float16 causes NaN in PaliGemma-2 attention
+    size_gb: 8.5
+
+prompt_guards:
+  llamaguard4:
+    hf_id: "meta-llama/Llama-Guard-3-1B"   # 1B ← was 12B (~2GB vs ~24GB)
+    type: "text_lm"
+    requires_hf_token: true
+    torch_dtype: "float16"
+    size_gb: 2.0
+
+  shieldgemma_text:
+    ollama_id: "shieldgemma:2b"
+    type: "ollama"
+    ollama_host: "http://localhost:11434"

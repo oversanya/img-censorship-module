@@ -1,0 +1,49 @@
+categories:
+  - id: csam
+    label: "Child Sexual Abuse Material"
+    priority: critical
+    threshold_block: 0.0   # immediate BLOCK, no threshold
+    threshold_review: 0.0
+    description: "Any sexual content involving minors"
+
+  - id: sexual_explicit
+    label: "Sexually Explicit"
+    priority: high
+    threshold_block: 0.80   # empirical: p50 unsafe=0.885, 0 false positives on safe images
+    threshold_review: 0.10  # empirical: safe images p95=0.067 → keep review zone tight
+    description: "Pornographic content, erotica, nudity"
+
+  - id: violence_gore
+    label: "Violence / Gore"
+    priority: high
+    threshold_block: 0.70   # lower: SG2 violence policy has wide score variance (0–1.0)
+    threshold_review: 0.05
+    description: "Graphic violence, mutilation, gore"
+
+  - id: extremism
+    label: "Extremism / Terrorism"
+    priority: high
+    threshold_block: 0.75   # empirical: illegal/dangerous content p50=0.961
+    threshold_review: 0.05
+    description: "Extremist symbols, terrorist propaganda, incitement"
+
+  - id: hate_speech
+    label: "Hate Speech"
+    priority: medium
+    threshold_block: 0.80
+    threshold_review: 0.10
+    description: "Racial/ethnic/religious hatred, discriminatory symbols"
+
+  - id: personal_data
+    label: "Personal Data / PII"
+    priority: medium
+    threshold_block: 0.85
+    threshold_review: 0.10
+    description: "Passports, bank cards, faces linked to personal data"
+
+  - id: financial_fraud
+    label: "Financial Fraud Materials"
+    priority: medium
+    threshold_block: 0.80
+    threshold_review: 0.10
+    description: "Forged documents, phishing materials, fake cards"

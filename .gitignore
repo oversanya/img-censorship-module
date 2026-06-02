@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+audit.jsonl
+reports/
+*.pt
+*.bin
+*.safetensors
+.DS_Store

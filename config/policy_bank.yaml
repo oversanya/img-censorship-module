@@ -1,0 +1,73 @@
+# Bank-specific policy configuration
+policy_name: "Bank AI Content Policy v1.0"
+version: "1.0.0"
+effective_date: "2025-06-01"
+
+# Global pipeline thresholds
+# Calibrated on 100 UnsafeBench images (50 safe / 50 unsafe) with ShieldGemma-2 bfloat16 on MPS.
+# Empirical distributions (max score across sexual/violence/dangerous policies):
+#   Safe images:   p50=0.0002  p90=0.047  p95=0.067  max=0.68 (outlier → gray zone OK)
+#   Unsafe images: 56% score<0.05 (ShieldGemma-2 coverage gap: Deception/Hate/Spam not detected)
+#                  30% score≥0.80 (Sexual, Illegal activity, Harassment → immediate BLOCK)
+pipeline:
+  fast_threshold_block: 0.80   # Layer 1 score >= this → immediate BLOCK  (0/50 safe images blocked)
+  fast_threshold_allow: 0.05   # Layer 1 score <  this → immediate ALLOW  (92% safe images pass)
+  # Between 0.05 and 0.80 → escalate to Layer 2 reasoner (gray zone)
+
+# Per-category policy overrides (override taxonomy.yaml if set)
+category_overrides:
+  csam:
+    action: "BLOCK"          # Always block, no score needed
+    notify_security: true    # Trigger security alert
+
+# Audit settings
+audit:
+  log_path: "audit.jsonl"
+  log_allow: true            # Log even ALLOW decisions
+  retention_days: 365
+
+# Report settings
+report:
+  output_dir: "reports"
+  include_heatmap: true
+  language: "ru"             # Primary report language
+
+# Policy text for LLM-based models (ShieldGemma-2, LlavaGuard)
+policy_descriptions:
+  sexual_explicit: >
+    The image shall not contain sexually explicit material, including but not limited to:
+    exposed genitalia, explicit sexual acts, pornographic content, or graphic nudity
+    in a sexual context. Artistic nudity in clearly non-sexual contexts may be permitted
+    subject to human review.
+
+  violence_gore: >
+    The image shall not contain graphic violence or gore, including but not limited to:
+    mutilation, dismemberment, severe injury with visible wounds, torture, or content
+    that glorifies or celebrates violence against humans or animals.
+
+  extremism: >
+    The image shall not contain extremist or terrorist content, including but not limited to:
+    propaganda materials promoting violence or terrorism, symbols of designated terrorist
+    organizations, content inciting mass violence, or material glorifying extremist ideologies.
+
+  hate_speech: >
+    The image shall not contain hate speech or discriminatory content, including but not
+    limited to: imagery promoting hatred based on race, ethnicity, religion, nationality,
+    gender, or sexual orientation; Nazi or other extremist symbols used in a hateful context;
+    dehumanizing depictions of protected groups.
+
+  personal_data: >
+    The image shall not expose personal data or PII of individuals, including but not
+    limited to: passport or ID card images, bank card numbers, biometric data, medical
+    records, or identifiable personal photographs combined with sensitive personal information.
+
+  financial_fraud: >
+    The image shall not contain materials facilitating financial fraud, including but not
+    limited to: forged financial documents, counterfeit currency, phishing templates,
+    fake identity documents, or materials designed to deceive financial institutions or
+    individuals for monetary gain.
+
+  csam: >
+    The image shall absolutely not contain any sexual content involving minors. This is
+    a zero-tolerance policy. Any content meeting this definition results in immediate
+    blocking and security notification regardless of confidence score.
