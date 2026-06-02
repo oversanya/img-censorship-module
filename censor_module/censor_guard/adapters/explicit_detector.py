@@ -6,20 +6,36 @@ from pathlib import Path
 from censor_guard.schemas import SignalResult
 
 
+# Метки, которые у разных NSFW-моделей означают «небезопасно». Сверяем
+# подстрокой (label.lower()), поэтому подходят и "nsfw", и "porn", и "hentai".
 UNSAFE_LABEL_MARKERS = ("nsfw", "porn", "hentai", "sexy", "explicit")
 
 
 class ExplicitContentAdapter:
+    """Узкоспециализированный детектор откровенного контента (по умолчанию
+    Falconsai/nsfw_image_detection).
+
+    В отличие от zero-shot классификатора, это обычная обученная модель
+    image-classification: она выдаёт нормальные откалиброванные вероятности
+    по своим родным меткам (обычно "normal" / "nsfw"). Мы берём максимальную
+    оценку среди «небезопасных» меток и кладём её в категорию "sexual".
+    """
+
     name = "explicit_content_detector"
 
     def __init__(self, enabled: bool, model_id: str, cache_dir: str) -> None:
         self.enabled = enabled
         self.model_id = model_id
         self.cache_dir = cache_dir
+        # Кэш загруженного pipeline и текст ошибки загрузки — чтобы не пытаться
+        # грузить тяжёлую модель повторно на каждый запрос.
         self._pipeline = None
         self._load_error: str | None = None
 
     def _load(self):
+        # Ленивая загрузка: модель скачивается/инициализируется при первом вызове
+        # и далее переиспользуется. Любой сбой превращается в «мягкую» деградацию
+        # (skipped/error), а не в падение всего сервиса.
         if self._pipeline is not None:
             return self._pipeline
         if self._load_error is not None:
@@ -65,6 +81,8 @@ class ExplicitContentAdapter:
                 reason=f"Explicit-content detector failed: {exc}",
             )
 
+        # Из всех меток модели берём максимальную оценку среди тех, что
+        # распознаны как «небезопасные». raw сохраняет полный расклад для отладки.
         max_score = 0.0
         raw = {}
         for item in results:
@@ -74,6 +92,8 @@ class ExplicitContentAdapter:
             if any(marker in label for marker in UNSAFE_LABEL_MARKERS):
                 max_score = max(max_score, score)
 
+        # Категорию добавляем, только если действительно что-то нашли (>0),
+        # иначе сенсор «молчит» и не влияет на решение.
         categories = {"sexual": max_score} if max_score > 0 else {}
         return SignalResult(
             name=self.name,
