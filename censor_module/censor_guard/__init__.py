@@ -1,0 +1,2 @@
+"""Censor module MVP package."""
+
