@@ -27,6 +27,7 @@ class GuardrailPipeline:
         self.ocr = OCRAdapter(
             enabled=self.settings.enable_ocr,
             tesseract_cmd=self.settings.tesseract_cmd,
+            tessdata_dir=self.settings.tessdata_dir,
         )
         self.visual = VisualClassifierAdapter(
             enabled=self.settings.enable_visual_classifier,
