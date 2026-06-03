@@ -1,10 +1,19 @@
+# Виртуальное окружение и кэши
+.venv/
+venv/
+.cache/
 __pycache__/
 .pytest_cache/
 .mypy_cache/
-.venv/
-venv/
 *.pyc
 *.pyo
 *.pyd
 *.log
 
+# Экспортируемый use-case датасет (может содержать NSFW — не коммитим)
+use_case_dataset/
+*.zip
+
+# Картинки, которые пользователь кладёт в edge_cases (README остаётся в репо)
+edge_cases/**
+!edge_cases/README.md
