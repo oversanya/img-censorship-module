@@ -101,10 +101,21 @@ const hardBlockCategories = new Set([
   "forged_documents",
   "personal_biometric_data",
   "fraudulent_qr_payment",
+  "financial_misleading",
+  "investment_manipulation",
+  "discrimination_hate",
+  "political_persuasion",
+  "spam_scams",
+  "brand_ip_abuse",
+  "official_interface_impersonation",
+  "bank_reputation_risk",
+  "gambling_fast_money",
+  "sanctions_geopolitical",
   "shocking",
 ]);
 
 const signalLabels = {
+  ui_policy_guard: "UI-фильтр запрещенных тем",
   text_guard_stub: "Текстовый фильтр промпта",
   text_guard_heuristic: "Текстовый фильтр промпта",
   ocr_text_guard_stub: "Текстовый фильтр OCR",
@@ -155,6 +166,244 @@ const examples = {
     prompt: "Сделай рекламу инвестиций: гарантированная прибыль без риска, быстрые деньги за день, срочно покупайте актив.",
   },
 };
+
+const blockScore = 0.95;
+const word = "[\\p{L}\\p{N}_-]*";
+const forbiddenTopicRules = [
+  {
+    category: "sexual_minors",
+    patterns: [
+      new RegExp(`(?:детск${word}|несовершеннолетн${word}|малолетн${word}|underage|minor|child).{0,60}(?:порно${word}|эрот${word}|сексу${word}|интим${word}|обнаж${word}|porn|sexual|nude)`, "iu"),
+      new RegExp(`(?:порно${word}|эрот${word}|сексу${word}|интим${word}|обнаж${word}|porn|sexual|nude).{0,60}(?:детск${word}|несовершеннолетн${word}|малолетн${word}|underage|minor|child)`, "iu"),
+      /(?:csam|child\s+sexual\s+abuse|child\s+porn)/iu,
+    ],
+  },
+  {
+    category: "sexual",
+    patterns: [
+      new RegExp(`(?:сексуальн${word}|порно${word}|порнограф${word}|эротик${word}|эротическ${word}|обнажен${word}|гол${word}\\s+тел${word}|интим${word}|nsfw|hentai|porn|pornographic|nude|nudity|explicit sex|sexual content)`, "iu"),
+    ],
+  },
+  {
+    category: "hate_extremism",
+    patterns: [
+      new RegExp(`(?:экстремиз${word}|экстремист${word}|террор${word}|нацист${word}|фашист${word}|свастик${word}|игил|isis|islamic state|terroris${word}|extremis${word})`, "iu"),
+      new RegExp(`(?:запрещенн${word}|forbidden|banned)\\W{0,20}(?:символик${word}|symbol${word})`, "iu"),
+      new RegExp(`(?:hate|ненавист${word})\\W{0,20}(?:symbol${word}|символ${word})`, "iu"),
+    ],
+  },
+  {
+    category: "violence_gore",
+    patterns: [
+      new RegExp(`(?:насили${word}|жесток${word}|кров${word}|пытк${word}|казн${word}|расчлен${word}|увечь${word}|мучени${word}|mutilat${word}|gore|blood${word}|tortur${word}|execution|brutal violence)`, "iu"),
+      new RegExp(`(?:графическ${word}|graphic)\\W{0,20}(?:насили${word}|violence|кров${word}|blood)`, "iu"),
+    ],
+  },
+  {
+    category: "shocking",
+    patterns: [
+      new RegExp(`(?:шок[-\\s]?контент${word}|шокирующ${word}|отталкивающ${word}|disturbing|shock content|shocking content)`, "iu"),
+      new RegExp(`(?:мертв${word}\\s+тел${word}|corpse|dead body)`, "iu"),
+    ],
+  },
+  {
+    category: "self_harm",
+    patterns: [
+      new RegExp(`(?:суицид${word}|самоубий${word}|самоповреж${word}|порез${word}\\s+вен${word}|повеситься|self[-\\s]?harm|suicide|kill myself|cutting wrists)`, "iu"),
+    ],
+  },
+  {
+    category: "drugs",
+    patterns: [
+      new RegExp(`(?:наркотик${word}|наркотическ${word}|наркоторгов${word}|кокаин${word}|героин${word}|марихуан${word}|каннабис${word}|метамфетамин${word}|амфетамин${word}|экстази|спайс|закладк${word}|drug${word}|cocaine|heroin|meth|cannabis)`, "iu"),
+      new RegExp(`(?:пропаганд${word}|promotion)\\W{0,20}(?:наркотик${word}|drug${word})`, "iu"),
+    ],
+  },
+  {
+    category: "weapons_crime",
+    patterns: [
+      new RegExp(`(?:оружи${word}|пистолет${word}|автомат${word}|винтовк${word}|взрывчатк${word}|взрыв${word}\\s+устройств${word}|бомб${word}|weapon${word}|firearm${word}|gun${word}|explosive${word}|bomb${word})`, "iu"),
+      new RegExp(`(?:как|инструкци${word}|схем${word}|гайд|manual|how to)\\W{0,30}(?:сделать|изготовить|собрать|make|build)\\W{0,30}(?:бомб${word}|оружи${word}|explosive${word}|bomb${word}|weapon${word})`, "iu"),
+      new RegExp(`(?:криминальн${word}|criminal)\\W{0,20}(?:инструкци${word}|instruction${word})`, "iu"),
+    ],
+  },
+  {
+    category: "illegal_activity",
+    patterns: [
+      new RegExp(`(?:незаконн${word}|криминальн${word}|преступлен${word}|преступн${word}|отмывани${word}\\s+денег|взлом${word}|украсть|краж${word}|угон${word}|обход\\s+kyc|illegal|criminal|money laundering|hack${word}|steal${word})`, "iu"),
+    ],
+  },
+  {
+    category: "deception_fraud",
+    patterns: [
+      new RegExp(`(?:мошен${word}|фишинг${word}|скам${word}|обман${word}|социальн${word}\\s+инженер${word}|phishing|scam${word}|fraud${word}|social engineering)`, "iu"),
+      new RegExp(`(?:фейк${word}|fake|поддельн${word})\\W{0,25}(?:уведомлен${word}|push|пуш|сайт|форма|payment|bank)`, "iu"),
+      /(?:срочно|urgent)\W{0,25}(?:перевести|оплатить|transfer|pay)/iu,
+    ],
+  },
+  {
+    category: "fraudulent_qr_payment",
+    patterns: [
+      new RegExp(`(?:qr|куар|кьюар)[-\\s]?(?:код${word})?.{0,40}(?:мошен${word}|фейк${word}|поддельн${word}|перевод${word}|оплат${word}|платеж${word}|payment|transfer)`, "iu"),
+      new RegExp(`(?:платежн${word}\\s+форм${word}|payment form)\\W{0,30}(?:мошен${word}|фейк${word}|поддельн${word}|fake|fraud)`, "iu"),
+      new RegExp(`(?:фейк${word}|поддельн${word}|fake)\\W{0,20}(?:push|пуш)[-\\s]?(?:уведомлен${word}|notification${word})`, "iu"),
+    ],
+  },
+  {
+    category: "forged_documents",
+    patterns: [
+      new RegExp(`(?:поддельн${word}|фальшив${word}|фейк${word}|fake|forged|counterfeit)\\W{0,25}(?:документ${word}|паспорт${word}|справк${word}|договор${word}|сертификат${word}|карт${word}|id|passport|certificate|contract|card)`, "iu"),
+      new RegExp(`(?:нарисуй|создай|сгенерируй|make|generate)\\W{0,25}(?:паспорт${word}|справк${word}|договор${word})\\W{0,25}(?:как\\s+настоящ${word}|официальн${word}|real|official)`, "iu"),
+    ],
+  },
+  {
+    category: "personal_biometric_data",
+    patterns: [
+      new RegExp(`(?:персональн${word}\\s+данн${word}|личн${word}\\s+данн${word}|паспортн${word}\\s+данн${word}|биометр${word}|снилс|инн|cvv|cvc|personal data|biometric${word})`, "iu"),
+      new RegExp(`(?:номер${word}|данн${word})\\W{0,15}(?:карт${word}|паспорт${word}|телефон${word}|card|passport|phone)`, "iu"),
+      new RegExp(`(?:платежн${word}|банковск${word})\\W{0,15}(?:реквизит${word}|данн${word}|card details|payment details)`, "iu"),
+    ],
+  },
+  {
+    category: "financial_misleading",
+    patterns: [
+      new RegExp(`(?:быстр${word}\\s+деньг${word}|легк${word}\\s+деньг${word}|без\\s+риск${word}|нулев${word}\\s+риск${word}|no risk|risk[-\\s]?free|quick money|easy money)`, "iu"),
+      new RegExp(`(?:финансов${word}|financial).{0,30}(?:ввод${word}\\s+в\\s+заблуждени${word}|misleading)`, "iu"),
+      new RegExp(`(?:гарантированн${word}|guaranteed)\\W{0,20}(?:прибыл${word}|доход${word}|return${word}|profit${word})`, "iu"),
+      new RegExp(`(?:обещай|promise)\\W{0,20}(?:прибыл${word}|доход${word}|profit${word}|return${word})`, "iu"),
+    ],
+  },
+  {
+    category: "investment_manipulation",
+    patterns: [
+      new RegExp(`(?:манипуляц${word}\\s+рынк${word}|памп${word}|дамп${word}|инсайд${word}|pump and dump|market manipulation|insider trading)`, "iu"),
+      new RegExp(`(?:срочно|немедленно|urgent)\\W{0,20}(?:покупай${word}|продавай${word}|buy|sell)\\W{0,20}(?:актив${word}|акци${word}|asset${word}|stock${word})`, "iu"),
+      new RegExp(`(?:гарантированн${word}|guaranteed)\\W{0,20}(?:инвест${word}|доход${word}|return${word})`, "iu"),
+    ],
+  },
+  {
+    category: "discrimination_hate",
+    patterns: [
+      new RegExp(`(?:дискриминац${word}|hate speech|ненавистническ${word}\\s+реч${word}|расов${word}\\s+ненавист${word}|ксенофоби${word}|расист${word}|slur${word}|racis${word}|xenophob${word})`, "iu"),
+      new RegExp(`(?:униж${word}|оскорб${word}|ненавид${word}|attack)\\W{0,25}(?:рас${word}|нац${word}|религи${word}|этнос${word}|пол${word}|ориентаци${word}|race|religion|ethnicity|gender)`, "iu"),
+    ],
+  },
+  {
+    category: "political_persuasion",
+    patterns: [
+      new RegExp(`(?:политическ${word}\\s+агитац${word}|предвыборн${word}|выборн${word}\\s+кампани${word}|голосуй${word}|голосовать\\s+за|поддержи\\s+кандидат${word}|митинг${word}\\s+за|political campaign|vote for|election campaign)`, "iu"),
+      new RegExp(`(?:спорн${word}|controversial)\\W{0,20}(?:политическ${word})?\\W{0,10}(?:символик${word}|symbol${word})`, "iu"),
+    ],
+  },
+  {
+    category: "brand_ip_abuse",
+    patterns: [
+      new RegExp(`(?:незаконн${word}|без\\s+разрешен${word}|unauthorized|without permission)\\W{0,25}(?:бренд${word}|логотип${word}|товарн${word}\\s+знак${word}|trademark${word}|logo${word})`, "iu"),
+      new RegExp(`(?:скопируй|подделай|имитируй|copy|fake)\\W{0,25}(?:бренд${word}|логотип${word}|айдентик${word}|brand|logo)`, "iu"),
+      new RegExp(`(?:чуж${word})\\W{0,10}(?:бренд${word}|логотип${word})`, "iu"),
+    ],
+  },
+  {
+    category: "official_interface_impersonation",
+    patterns: [
+      new RegExp(`(?:имитируй|скопируй|подделай|fake|copy)\\W{0,25}(?:официальн${word})?\\W{0,10}(?:интерфейс${word}|сайт${word}|кабинет${word}|interface|website|screen)`, "iu"),
+      new RegExp(`(?:как|под)\\W{0,10}(?:официальн${word})\\W{0,20}(?:госуслуг${word}|госорган${word}|банк${word}|регулятор${word}|government|bank|regulator)`, "iu"),
+      new RegExp(`(?:госорган${word}|госуслуг${word}|центробанк${word}|government agency)\\W{0,25}(?:уведомлен${word}|форма|интерфейс|notice|form|interface)`, "iu"),
+    ],
+  },
+  {
+    category: "bank_reputation_risk",
+    patterns: [
+      new RegExp(`(?:порочащ${word}\\s+банк${word}|клевет${word}\\s+на\\s+банк${word}|defame bank|bank defamation)`, "iu"),
+      new RegExp(`(?:банк|клиент${word}|сотрудник${word})\\W{0,20}(?:мошенник${word}|вор${word}|украл${word}|коррупционер${word}|criminal|thief|fraudster)`, "iu"),
+    ],
+  },
+  {
+    category: "gambling_fast_money",
+    patterns: [
+      new RegExp(`(?:азартн${word}\\s+игр${word}|ставк${word}|казино${word}|букмекер${word}|лотере${word}|беттинг${word}|быстр${word}\\s+деньг${word}|gambling|betting|casino|bookmaker|lottery|quick money)`, "iu"),
+    ],
+  },
+  {
+    category: "sanctions_geopolitical",
+    patterns: [
+      new RegExp(`(?:санкци${word}|военн${word}|войн${word}|геополит${word}|армия${word}|боев${word}\\s+действ${word}|спецоперац${word}|sanction${word}|military|war|geopolitical)`, "iu"),
+    ],
+  },
+];
+
+function normalizePolicyText(text) {
+  return text
+    .normalize("NFKC")
+    .toLocaleLowerCase("ru-RU")
+    .replaceAll("ё", "е")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isNegatedPolicyMatch(text, matchIndex) {
+  const context = text.slice(Math.max(0, matchIndex - 90), matchIndex);
+  return /(?:^|[\s,.;:])(?:без|нет|не|нельзя|исключи|исключить|избегай|избегать|против|анти|without|avoid|exclude|no|not|don't|do not)[\s,.;:]*(?:[\p{L}\p{N}_-]+[\s,.;:]+){0,8}[\s,.;:]*$/iu.test(context);
+}
+
+function findForbiddenPromptTopics(prompt) {
+  if (!prompt) return null;
+
+  const normalized = normalizePolicyText(prompt);
+  const categories = {};
+  const matches = {};
+
+  forbiddenTopicRules.forEach((rule) => {
+    rule.patterns.forEach((pattern) => {
+      pattern.lastIndex = 0;
+      const match = pattern.exec(normalized);
+      if (!match || isNegatedPolicyMatch(normalized, match.index)) return;
+
+      categories[rule.category] = Math.max(categories[rule.category] || 0, blockScore);
+      matches[rule.category] ||= [];
+      matches[rule.category].push(match[0].replace(/\s+/g, " ").slice(0, 120));
+    });
+  });
+
+  if (!Object.keys(categories).length) return null;
+
+  const sortedCategories = Object.keys(categories).sort();
+  return {
+    categories,
+    matches,
+    sortedCategories,
+  };
+}
+
+function buildUiBlockedResponse(payload, policyMatch) {
+  const evidence = Object.fromEntries(
+    policyMatch.sortedCategories.map((category) => [category, ["ui_policy_guard"]])
+  );
+
+  return {
+    request_id: `ui-${Date.now().toString(36)}`,
+    scenario: payload.scenario,
+    stage: payload.stage,
+    verdict: "block",
+    categories: policyMatch.sortedCategories,
+    confidence: blockScore,
+    reason: "Blocked by UI policy guard due to prohibited topic.",
+    evidence,
+    signals: [
+      {
+        name: "ui_policy_guard",
+        status: "ok",
+        categories: policyMatch.categories,
+        reason: "UI policy guard matched prohibited topic before API request.",
+        raw: {
+          mode: "frontend_heuristic",
+          matches: policyMatch.matches,
+        },
+      },
+    ],
+    notes: ["Запрос заблокирован в UI до вызова /v1/moderate."],
+  };
+}
 
 Object.entries(categoryLabels).forEach(([code, label]) => {
   const item = document.createElement("div");
@@ -231,6 +480,8 @@ function translateReason(reason) {
     "Blocked by image guardrail due to unsafe content.": "Заблокировано: сработала политика безопасности контента.",
     "Request requires secondary review due to medium-confidence policy signals.": "Нужна ручная проверка: есть сигналы средней уверенности.",
     "No blocking policy signals exceeded review thresholds.": "Блокирующие сигналы не превысили пороги review/block.",
+    "Blocked by UI policy guard due to prohibited topic.": "Заблокировано UI-фильтром: запрос содержит запрещенную тему.",
+    "UI policy guard matched prohibited topic before API request.": "UI-фильтр нашел запрещенную тему до отправки запроса в API.",
     "Heuristic text guard matched policy keywords in prompt or OCR text.": "Текстовый фильтр нашел совпадение с правилами политики.",
     "Heuristic text guard found no policy keyword matches.": "Текстовый фильтр не нашел нарушений.",
     "Heuristic policy judge fused available sensor evidence.": "Арбитр политики объединил найденные сигналы.",
@@ -492,6 +743,14 @@ form.addEventListener("submit", async (event) => {
     },
   };
   lastPayload = payload;
+
+  const policyMatch = findForbiddenPromptTopics(prompt);
+  if (policyMatch) {
+    renderResult(buildUiBlockedResponse(payload, policyMatch));
+    activatePanel("signals", false);
+    toast("Запрос заблокирован UI-фильтром запрещенных тем");
+    return;
+  }
 
   try {
     setBusy(true);
