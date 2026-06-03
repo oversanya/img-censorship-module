@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Бета банк Guardrail</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Навигация">
+        <div class="traffic" aria-hidden="true">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+
+        <div class="brand-block">
+          <div>
+            <p class="eyebrow">MLSecOps контур</p>
+            <h1>Бета банк</h1>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <a class="nav-item active" href="#moderation">Guardrail</a>
+          <button class="nav-item nav-button" type="button" data-panel-tab="signals">Сигналы</button>
+          <button class="nav-item nav-button" type="button" data-panel-tab="taxonomy">Таксономия</button>
+          <button class="nav-item nav-button" type="button" data-panel-tab="audit">Аудит</button>
+          <a class="nav-item" href="/docs" target="_blank" rel="noreferrer">API docs</a>
+        </nav>
+
+        <div class="sidebar-section">
+          <p class="section-title">Контур</p>
+          <div class="mini-stat">
+            <span>Input</span>
+            <strong>pre-check</strong>
+          </div>
+          <div class="mini-stat">
+            <span>Output</span>
+            <strong>post-check</strong>
+          </div>
+        </div>
+
+        <div class="sidebar-footer">
+          <span class="status-led"></span>
+          <span id="healthLabel">API проверяется</span>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Независимый цензор-модуль</p>
+            <h2>Проверка запроса и изображения</h2>
+          </div>
+          <div class="top-actions">
+          </div>
+        </header>
+
+        <section class="hero-grid" id="moderation">
+          <form class="composer" id="moderationForm">
+            <div class="composer-head">
+              <div>
+                <p class="eyebrow">Запрос на модерацию</p>
+                <h3>Что проверяем</h3>
+              </div>
+              <button class="icon-button" type="button" id="resetButton" title="Очистить форму" aria-label="Очистить форму">
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+
+            <div class="control-row">
+              <label class="field">
+                <span>Сценарий</span>
+                <select id="scenario">
+                  <option value="text2image">text2image</option>
+                  <option value="img2img_stylization">img2img stylization</option>
+                  <option value="img2img_editing">img2img editing</option>
+                  <option value="output">output</option>
+                </select>
+              </label>
+
+              <fieldset class="segmented" aria-label="Этап проверки">
+                <legend>Этап</legend>
+                <label>
+                  <input type="radio" name="stage" value="input" checked />
+                  <span>Input</span>
+                </label>
+                <label>
+                  <input type="radio" name="stage" value="output" />
+                  <span>Output</span>
+                </label>
+              </fieldset>
+            </div>
+
+            <div class="saved-prompts">
+              <p class="eyebrow">Сохраненные промпты</p>
+              <div class="examples">
+                <button type="button" data-example="safe">Safe</button>
+                <button type="button" data-example="fraud">Фишинг</button>
+                <button type="button" data-example="docs">Документы</button>
+                <button type="button" data-example="invest">Инвестиции</button>
+              </div>
+            </div>
+
+            <label class="field prompt-field">
+              <span>Промпт или описание изображения</span>
+              <textarea id="prompt" rows="7" placeholder="Например: сделай фейковое push-уведомление банка с QR-кодом для перевода"></textarea>
+            </label>
+
+            <div class="dropzone" id="dropzone">
+              <input id="imageInput" type="file" accept="image/*" />
+              <div class="drop-copy" id="dropCopy">
+                <strong>Добавить изображение</strong>
+                <span>PNG, JPG или WebP до демо-размера</span>
+              </div>
+              <img id="preview" alt="Предпросмотр загруженного изображения" hidden />
+            </div>
+
+            <div class="composer-actions">
+              <div class="request-meta" id="requestMeta">Готово к проверке</div>
+              <button class="submit-button" id="submitButton" type="submit">
+                <span>Проверить</span>
+                <span class="send-icon" aria-hidden="true"></span>
+              </button>
+            </div>
+          </form>
+
+          <section class="result-panel" id="resultPanel" aria-live="polite">
+            <div class="empty-state" id="emptyState">
+              <div class="empty-mark">AI</div>
+              <h3>Вердикт появится здесь</h3>
+              <p>После проверки интерфейс покажет решение, категорию, уверенность, обоснование и сработавшие сенсоры.</p>
+            </div>
+
+            <div class="result-content" id="resultContent" hidden>
+              <div class="verdict-strip">
+                <div>
+                  <p class="eyebrow">Вердикт</p>
+                  <h3 id="verdictLabel">allow</h3>
+                </div>
+                <div class="confidence-ring" id="confidenceRing">
+                  <span id="confidenceValue">0%</span>
+                </div>
+              </div>
+
+              <p class="reason" id="reasonText"></p>
+
+              <div class="category-list" id="categoryList"></div>
+
+              <div class="evidence" id="audit">
+                <div class="panel-title">
+                  <span>Обоснование</span>
+                  <strong id="requestId">request</strong>
+                </div>
+                <div id="evidenceList"></div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="inspector" id="inspector">
+          <div class="inspector-tabs" role="tablist" aria-label="Разделы проверки">
+            <button class="tab-button active" type="button" data-panel-tab="signals">Сигналы</button>
+            <button class="tab-button" type="button" data-panel-tab="taxonomy">Таксономия</button>
+            <button class="tab-button" type="button" data-panel-tab="audit">Аудит</button>
+          </div>
+
+          <section class="ops-panel active" id="signals" data-panel="signals">
+            <div class="panel-title">
+              <span>Слои контроля</span>
+              <strong id="signalCount">0</strong>
+            </div>
+            <div class="panel-summary" id="signalSummary">Запустите проверку, чтобы увидеть работу сенсоров.</div>
+            <div class="signal-table" id="signalTable"></div>
+          </section>
+
+          <section class="ops-panel" id="taxonomy" data-panel="taxonomy" hidden>
+            <details class="taxonomy-disclosure" id="taxonomyDetails">
+              <summary>
+                <span>Категории кейса</span>
+                <strong>policy v0.1</strong>
+              </summary>
+              <div class="panel-summary">Категории разделены на блокировку и ручную проверку. Список раскрывается для демонстрации политики.</div>
+              <div class="taxonomy-grid" id="taxonomyGrid"></div>
+            </details>
+          </section>
+
+          <section class="ops-panel" id="auditPanel" data-panel="audit" hidden>
+            <div class="panel-title">
+              <span>Аудит решения</span>
+              <strong id="auditCount">0</strong>
+            </div>
+            <div class="panel-summary" id="auditSummary">Пока нет запросов. После проверки здесь появится журнал решения.</div>
+            <div class="audit-log" id="auditLog"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js?v=8"></script>
+  </body>
+</html>
