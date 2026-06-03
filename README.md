@@ -5,19 +5,20 @@ First implementation of a multi-layer image guardrail for `text2image`, `img2img
 ## What is implemented
 
 - unified moderation API for input and output checks
-- lightweight heuristic text guard for prompt and OCR text demo checks
+- text guard stub that always marks prompt text as safe
 - OCR adapter for text found inside images
 - visual multi-label image classifier adapter
 - explicit-content detector adapter
 - policy-judge layer with a heuristic fallback and an optional ShieldGemma integration point
 - rule-based decision engine with `allow / review / block`
 - CLI for local moderation runs
+- static frontend prototype for manual API checks
 
 ## Architecture
 
 ```text
 request
-  -> text guard heuristic
+  -> text guard stub
   -> image fast analyzer
        -> OCR
        -> visual classifier
@@ -56,19 +57,6 @@ uvicorn censor_guard.app:app --reload
 python -m censor_guard.cli --scenario output --image-path path/to/image.png
 ```
 
-## Safety dataset
-
-`data/forbidden_prompts_ru.jsonl` contains a Russian prompt-only regression set
-for 21 prohibited-content categories. Each row has `id`, `category`, `severity`,
-`prompt`, and `rationale`. The dataset is intentionally high-level: it tests
-guardrail coverage without storing operational instructions for harmful acts.
-
-Run the regression checks with:
-
-```bash
-python -m unittest discover -s tests
-```
-
 ## Environment variables
 
 - `CENSOR_ENABLE_OCR=true|false`
@@ -92,6 +80,6 @@ OCR lookup order:
 
 ## Notes
 
-- The text filter is a lightweight keyword heuristic for the frontend demo. It keeps the adapter contract in place until a stronger ML/LLM text guard is attached.
+- The text filter is a placeholder by design. It always returns `safe`, but the adapter contract is already in place.
 - The OCR, visual classifier, explicit detector, and ShieldGemma judge are optional adapters. If a backend is unavailable, the service returns a structured `skipped` status instead of failing the whole request.
 - The heuristic policy judge keeps the pipeline operational before a real multimodal judge is attached.

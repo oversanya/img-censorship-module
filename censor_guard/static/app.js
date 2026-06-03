@@ -98,7 +98,9 @@ const hardBlockCategories = new Set([
 ]);
 
 const signalLabels = {
+  text_guard_stub: "Текстовый фильтр промпта",
   text_guard_heuristic: "Текстовый фильтр промпта",
+  ocr_text_guard_stub: "Текстовый фильтр OCR",
   ocr_text_guard_heuristic: "Текстовый фильтр OCR",
   policy_judge_heuristic: "Эвристический арбитр политики",
   policy_judge_shieldgemma: "Мультимодальный арбитр ShieldGemma",
@@ -226,6 +228,7 @@ function translateReason(reason) {
     "Heuristic text guard found no policy keyword matches.": "Текстовый фильтр не нашел нарушений.",
     "Heuristic policy judge fused available sensor evidence.": "Арбитр политики объединил найденные сигналы.",
     "No prompt text supplied.": "Текст промпта не передан.",
+    "Placeholder adapter: prompt text is treated as safe in MVP.": "Текстовый фильтр сейчас работает как заглушка и считает промпт безопасным.",
     "ShieldGemma judge disabled by configuration.": "Мультимодальный арбитр отключен в конфигурации.",
     "No readable text found in image.": "OCR не нашел читаемый текст на изображении.",
     "Extracted text from image via OCR.": "OCR извлек текст с изображения.",
