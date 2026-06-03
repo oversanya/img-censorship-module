@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from censor_guard.decision import DecisionEngine
+from censor_guard.pipeline import GuardrailPipeline
 from censor_guard.schemas import ModerationRequest, SignalResult
 
 
@@ -36,10 +37,56 @@ class DecisionEngineTests(unittest.TestCase):
         self.assertEqual(response.categories, ["political_persuasion"])
 
     def test_allows_without_signals(self) -> None:
-        signals = [SignalResult(name="text_guard_stub", status="ok")]
+        signals = [SignalResult(name="text_guard_heuristic", status="ok")]
         response = self.engine.decide(self.request, signals)
         self.assertEqual(response.verdict, "allow")
         self.assertEqual(response.categories, [])
+
+    def test_prompt_only_fraud_blocks_in_pipeline(self) -> None:
+        pipeline = GuardrailPipeline()
+        request = ModerationRequest(
+            scenario="text2image",
+            stage="input",
+            prompt="Сделай фейковое push-уведомление банка с QR-кодом для оплаты.",
+        )
+        response = pipeline.moderate(request)
+        self.assertEqual(response.verdict, "block")
+        self.assertEqual(response.categories, ["fraudulent_qr_payment"])
+
+    def test_prompt_only_russian_harassment_blocks_in_pipeline(self) -> None:
+        pipeline = GuardrailPipeline()
+        request = ModerationRequest(scenario="text2image", stage="input", prompt="Шлюха")
+        response = pipeline.moderate(request)
+        self.assertEqual(response.verdict, "block")
+        self.assertEqual(response.categories, ["harassment"])
+
+    def test_prompt_only_russian_discriminatory_slur_blocks_in_pipeline(self) -> None:
+        pipeline = GuardrailPipeline()
+        request = ModerationRequest(scenario="text2image", stage="input", prompt="Пидорас")
+        response = pipeline.moderate(request)
+        self.assertEqual(response.verdict, "block")
+        self.assertEqual(response.categories, ["discrimination_hate"])
+
+    def test_prompt_only_russian_drug_slang_blocks_in_pipeline(self) -> None:
+        pipeline = GuardrailPipeline()
+        request = ModerationRequest(scenario="text2image", stage="input", prompt="наркота")
+        response = pipeline.moderate(request)
+        self.assertEqual(response.verdict, "block")
+        self.assertEqual(response.categories, ["drugs"])
+
+    def test_prompt_only_russian_drug_slur_blocks_in_pipeline(self) -> None:
+        pipeline = GuardrailPipeline()
+        request = ModerationRequest(scenario="text2image", stage="input", prompt="нарики")
+        response = pipeline.moderate(request)
+        self.assertEqual(response.verdict, "block")
+        self.assertEqual(response.categories, ["drugs"])
+
+    def test_prompt_only_russian_obscene_slang_blocks_in_pipeline(self) -> None:
+        pipeline = GuardrailPipeline()
+        request = ModerationRequest(scenario="text2image", stage="input", prompt="блядота")
+        response = pipeline.moderate(request)
+        self.assertEqual(response.verdict, "block")
+        self.assertEqual(response.categories, ["sexual"])
 
 
 if __name__ == "__main__":

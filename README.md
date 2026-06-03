@@ -5,7 +5,7 @@ First implementation of a multi-layer image guardrail for `text2image`, `img2img
 ## What is implemented
 
 - unified moderation API for input and output checks
-- text guard stub that always marks prompt text as safe
+- lightweight heuristic text guard for prompt and OCR text demo checks
 - OCR adapter for text found inside images
 - visual multi-label image classifier adapter
 - explicit-content detector adapter
@@ -17,7 +17,7 @@ First implementation of a multi-layer image guardrail for `text2image`, `img2img
 
 ```text
 request
-  -> text guard stub
+  -> text guard heuristic
   -> image fast analyzer
        -> OCR
        -> visual classifier
@@ -42,7 +42,11 @@ pip install -r requirements.txt
 uvicorn censor_guard.app:app --reload
 ```
 
-4. Open the docs:
+4. Open the frontend prototype:
+
+`http://127.0.0.1:8000/`
+
+5. Open the docs:
 
 `http://127.0.0.1:8000/docs`
 
@@ -50,6 +54,19 @@ uvicorn censor_guard.app:app --reload
 
 ```bash
 python -m censor_guard.cli --scenario output --image-path path/to/image.png
+```
+
+## Safety dataset
+
+`data/forbidden_prompts_ru.jsonl` contains a Russian prompt-only regression set
+for 21 prohibited-content categories. Each row has `id`, `category`, `severity`,
+`prompt`, and `rationale`. The dataset is intentionally high-level: it tests
+guardrail coverage without storing operational instructions for harmful acts.
+
+Run the regression checks with:
+
+```bash
+python -m unittest discover -s tests
 ```
 
 ## Environment variables
@@ -75,6 +92,6 @@ OCR lookup order:
 
 ## Notes
 
-- The text filter is a placeholder by design. It always returns `safe`, but the adapter contract is already in place.
+- The text filter is a lightweight keyword heuristic for the frontend demo. It keeps the adapter contract in place until a stronger ML/LLM text guard is attached.
 - The OCR, visual classifier, explicit detector, and ShieldGemma judge are optional adapters. If a backend is unavailable, the service returns a structured `skipped` status instead of failing the whole request.
 - The heuristic policy judge keeps the pipeline operational before a real multimodal judge is attached.

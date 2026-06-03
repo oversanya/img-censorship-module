@@ -58,13 +58,13 @@ class GuardrailPipeline:
             ocr_signal = self.ocr.extract(image)
             signals.append(ocr_signal)
             # 2) Если на картинке нашёлся текст — прогоняем его через текстовый
-            #    гард (сейчас это заглушка, см. text_stub.py). Переименовываем
+            #    гард. Переименовываем
             #    сигнал, чтобы в ответе было видно, что это проверка OCR-текста,
             #    а не основного промпта.
             if ocr_signal.text:
                 ocr_text = "\n".join(ocr_signal.text)
                 ocr_text_result = self.text_guard.moderate(ocr_text)
-                ocr_text_result.name = "ocr_text_guard_stub"
+                ocr_text_result.name = "ocr_text_guard_heuristic"
                 signals.append(ocr_text_result)
 
             # 3) Два визуальных сенсора: zero-shot мульти-классификатор по нашей
@@ -72,15 +72,18 @@ class GuardrailPipeline:
             signals.append(self.visual.moderate(image))
             signals.append(self.explicit.moderate(image))
 
-            # 4) Policy judge — «арбитр», который слитно переоценивает все
-            #    собранные сигналы (эвристика) или, в будущем, спросит мультимодальную
-            #    модель ShieldGemma. Получает signals целиком, поэтому идёт последним.
-            policy_signal = self.policy_judge.moderate(
-                image=image,
-                prompt=request.prompt,
-                signals=signals,
-            )
-            signals.append(policy_signal)
+        # 4) Policy judge — «арбитр», который слитно переоценивает все
+        #    собранные сигналы (эвристика) или, в будущем, спросит мультимодальную
+        #    модель ShieldGemma. Получает signals целиком, поэтому идёт последним.
+        #    Важно вызывать его и для prompt-only запросов: soft-категории вроде
+        #    harassment/hate speech тогда могут стать полноценным block, а не
+        #    зависать только в review.
+        policy_signal = self.policy_judge.moderate(
+            image=image,
+            prompt=request.prompt,
+            signals=signals,
+        )
+        signals.append(policy_signal)
 
         # 5) Финальное решение allow / review / block по порогам.
         return self.decision_engine.decide(request, signals)
