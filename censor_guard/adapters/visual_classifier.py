@@ -83,11 +83,11 @@ class VisualClassifierAdapter:
         for item in results:
             label = item["label"]
             score = float(item["score"])
+            raw[label] = score
             code = VISUAL_LABEL_TO_CODE.get(label)
             if code is None:
                 continue
             scores[code] = score
-            raw[label] = score
 
         return SignalResult(
             name=self.name,

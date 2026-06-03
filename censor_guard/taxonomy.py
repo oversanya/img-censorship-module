@@ -83,7 +83,8 @@ CATEGORY_SPECS: tuple[CategorySpec, ...] = (
 
 CATEGORY_BY_CODE = {spec.code: spec for spec in CATEGORY_SPECS}
 VISUAL_LABEL_TO_CODE = {spec.label: spec.code for spec in CATEGORY_SPECS}
-VISUAL_LABELS = [spec.label for spec in CATEGORY_SPECS]
+SAFE_VISUAL_LABEL = "safe everyday image"
+VISUAL_LABELS = [spec.label for spec in CATEGORY_SPECS] + [SAFE_VISUAL_LABEL]
 HARD_BLOCK_CATEGORIES = {spec.code for spec in CATEGORY_SPECS if spec.hard_block}
 SOFT_REVIEW_CATEGORIES = {spec.code for spec in CATEGORY_SPECS if not spec.hard_block}
 
