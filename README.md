@@ -36,13 +36,27 @@ request
 pip install -r requirements.txt
 ```
 
-3. Run the API:
+3. If you want the visual ML adapters too, install the extra ML dependencies:
+
+```bash
+pip install -r requirements-ml.txt
+```
+
+4. Install the Tesseract binary for your OS:
+
+- Windows: install Tesseract and make sure `tesseract.exe` is available, for example under `C:\Program Files\Tesseract-OCR\tesseract.exe`
+- macOS: `brew install tesseract`
+- Linux: install the system package, for example `sudo apt install tesseract-ocr`
+
+The repository already contains `tools/tessdata/eng.traineddata` and `tools/tessdata/rus.traineddata`, so Russian OCR does not depend on system language packs.
+
+5. Run the API:
 
 ```bash
 uvicorn censor_guard.app:app --reload
 ```
 
-4. Open the docs:
+6. Open the docs:
 
 `http://127.0.0.1:8000/docs`
 
@@ -67,11 +81,18 @@ python -m censor_guard.cli --scenario output --image-path path/to/image.png
 - `CENSOR_TESSERACT_CMD=D:/alpha_siirius/censor_module/tools/Tesseract-OCR/tesseract.exe`
 
 OCR lookup order:
+- project-local `tools/tessdata`, if present
 - `CENSOR_TESSERACT_CMD`, if set
 - `tesseract` from `PATH`
 - Windows defaults under `C:\Program Files\Tesseract-OCR`
 - macOS defaults such as `/opt/homebrew/bin/tesseract` and `/usr/local/bin/tesseract`
 - Linux default `/usr/bin/tesseract`
+
+OCR tries `rus`, `eng`, and `rus+eng`. If `tools/tessdata` exists in the project, it is used as the preferred source of language data.
+
+To make Russian OCR work on another machine, commit both:
+- `tools/tessdata/eng.traineddata`
+- `tools/tessdata/rus.traineddata`
 
 ## Notes
 

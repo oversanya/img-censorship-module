@@ -48,6 +48,23 @@ def _default_tesseract_cmd() -> str | None:
     return None
 
 
+def _default_tessdata_dir() -> str | None:
+    project_root = Path(__file__).resolve().parent.parent
+    candidates = (
+        project_root / "tools" / "tessdata",
+        project_root / "tools" / "Tesseract-OCR" / "tessdata",
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    tesseract_cmd = _default_tesseract_cmd()
+    if tesseract_cmd:
+        candidate = Path(tesseract_cmd).parent / "tessdata"
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
 @dataclass(frozen=True)
 class Settings:
     enable_ocr: bool = _env_bool("CENSOR_ENABLE_OCR", True)
@@ -61,3 +78,4 @@ class Settings:
     review_threshold: float = _env_float("CENSOR_REVIEW_THRESHOLD", 0.55)
     hf_cache_dir: str = os.getenv("CENSOR_HF_CACHE_DIR", _default_hf_cache())
     tesseract_cmd: str | None = os.getenv("CENSOR_TESSERACT_CMD", _default_tesseract_cmd() or "")
+    tessdata_dir: str | None = os.getenv("CENSOR_TESSDATA_DIR", _default_tessdata_dir() or "")
