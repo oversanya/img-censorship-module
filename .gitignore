@@ -9,6 +9,8 @@ __pycache__/
 *.pyo
 *.pyd
 *.log
+*.lock
+*.DS_store
 
 # Экспортируемый use-case датасет (может содержать NSFW — не коммитим)
 use_case_dataset/
@@ -17,3 +19,6 @@ use_case_dataset/
 # Картинки, которые пользователь кладёт в edge_cases (README остаётся в репо)
 edge_cases/**
 !edge_cases/README.md
+
+# Сохранённые отчёты бенчмарка (могут содержать NSFW-превью в predictions/графиках)
+reports/
