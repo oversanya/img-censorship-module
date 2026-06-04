@@ -1,0 +1,40 @@
+---
+title: Блок-схема тестового модуля проверки изображения
+---
+flowchart TD
+  image["Изображение для проверки"]
+  request["ModerationRequest<br/>image_path или image_base64"]
+  entry["HTTP API или CLI"]
+  pipeline["GuardrailPipeline.moderate"]
+  loadImage["Загрузка изображения<br/>в RGB"]
+
+  subgraph sensors["Сенсоры изображения"]
+    ocr["OCR<br/>извлечение текста с изображения"]
+    ocrTextGuard["Проверка OCR-текста<br/>текстовым гардом"]
+    visual["Визуальный классификатор<br/>оценка по категориям"]
+    explicit["NSFW-детектор<br/>поиск откровенного контента"]
+    policy["Policy judge<br/>сведение сигналов сенсоров"]
+  end
+
+  signals["Сигналы сенсоров<br/>SignalResult[]"]
+  decision["DecisionEngine<br/>сравнение с порогами"]
+  response["ModerationResponse"]
+  verdict["Вердикт<br/>allow / review / block"]
+
+  image -->|"передача файла или base64"| request
+  request -->|"запуск проверки"| entry
+  entry -->|"передача запроса"| pipeline
+  pipeline -->|"читает изображение"| loadImage
+  loadImage -->|"изображение"| ocr
+  loadImage -->|"изображение"| visual
+  loadImage -->|"изображение"| explicit
+  ocr -->|"найденный текст"| ocrTextGuard
+  ocr -->|"сигнал"| signals
+  ocrTextGuard -->|"сигнал"| signals
+  visual -->|"сигнал"| signals
+  explicit -->|"сигнал"| signals
+  signals -->|"все сигналы"| policy
+  policy -->|"итоговый сигнал"| signals
+  signals -->|"оценки категорий"| decision
+  decision -->|"итог проверки"| response
+  response -->|"поле verdict"| verdict
