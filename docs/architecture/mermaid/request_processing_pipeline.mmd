@@ -1,0 +1,39 @@
+---
+title: Блок-схема конвейера обработки запроса
+---
+flowchart TD
+  user["Пользователь LLM-чата"]
+  textInput["Текст"]
+  mixedInput["Изображение + текст"]
+  request["Запрос на генерацию или редактирование изображения"]
+  externalTextCheck["Внешняя базовая проверка текста<br/>на запрещенные категории"]
+  textCheck["Проверка<br/>текстового запроса"]
+  imageTextCheck["Проверка входного<br/>изображения и текста"]
+  inputDecision["Решение<br/>по входным данным"]
+  generator["Генератор изображений"]
+  outputContextCheck["Проверка сгенерированного изображения<br/>в контексте текстового запроса<br/>и входного изображения"]
+  decision["Решение цензор-модуля"]
+  response["Ответ пользователю"]
+  audit["Журнал модерации"]
+
+  user -->|"пишет prompt"| textInput
+  user -->|"загружает изображение и пишет prompt"| mixedInput
+  textInput -->|"формирует Text2Image-запрос"| request
+  mixedInput -->|"формирует Img2Img-запрос с инструкцией"| request
+
+  request -->|"передача текста"| externalTextCheck
+  request -->|"передача изображения и текста"| imageTextCheck
+  externalTextCheck -->|"текст"| textCheck
+  textCheck -->|"возврат вердикта"| inputDecision
+  imageTextCheck -->|"возврат вердикта"| inputDecision
+
+  inputDecision -->|"если разрешено"| generator
+  inputDecision -->|"если запрещено"| decision
+  generator -->|"создает изображение"| outputContextCheck
+  request -->|"передача контекста запроса"| outputContextCheck
+  outputContextCheck -->|"возврат вердикта"| decision
+  decision -->|"формирует ответ"| response
+  decision -->|"сохраняет решение и причины"| audit
+
+  classDef external fill:#eeeeee,stroke:#777777,stroke-width:2px,stroke-dasharray:6 4,color:#333333;
+  class externalTextCheck external;
