@@ -6,11 +6,11 @@ from typing import Any
 from PIL import Image
 
 from censor_guard.adapters.explicit_detector import ExplicitContentAdapter
-from censor_guard.adapters.policy_judge import HeuristicPolicyJudge
 from censor_guard.adapters.visual_classifier import VisualClassifierAdapter
 from censor_guard.config import Settings
 from censor_guard.decision import DecisionEngine
-from censor_guard.schemas import ModerationRequest
+from censor_guard.fusion import FUSION_SIGNAL_NAME, fuse
+from censor_guard.schemas import ModerationRequest, SignalResult
 
 
 # Маппинг 11 топиковых категорий UnsafeBench → коды нашей таксономии.
@@ -85,13 +85,16 @@ class ImageClassifierRunner:
             enabled=True,
             model_id=self.settings.visual_model_id,
             cache_dir=self.settings.hf_cache_dir,
+            calibration_floor=self.settings.calibration_floor,
         )
         self.explicit = ExplicitContentAdapter(
             enabled=True,
             model_id=self.settings.explicit_model_id,
             cache_dir=self.settings.hf_cache_dir,
         )
-        self.judge = HeuristicPolicyJudge() if use_policy_judge else None
+        # use_policy_judge=True → сводим сенсоры взвешенным noisy-OR (fusion.py);
+        # False → движок берёт максимум по сенсорам (легаси-режим для сравнения).
+        self.use_policy_judge = use_policy_judge
         self.engine = DecisionEngine(
             block_threshold=self.settings.block_threshold,
             review_threshold=self.settings.review_threshold,
@@ -104,20 +107,36 @@ class ImageClassifierRunner:
             image = image.convert("RGB")
 
         signals = [self.visual.moderate(image), self.explicit.moderate(image)]
-        if self.judge is not None:
-            # Эвристический судья усиливает консенсус сенсоров (см. policy_judge.py).
-            signals.append(self.judge.moderate(signals))
+
+        # Сырые оценки по каждому сенсору считаем до fusion (для разбора в ноутбуке).
+        signal_scores: dict[str, dict[str, float]] = {
+            signal.name: dict(signal.categories)
+            for signal in signals
+            if signal.status == "ok"
+        }
+
+        if self.use_policy_judge:
+            fusion = fuse(signals)
+            fused: dict[str, float] = fusion.scores()
+            signals.append(
+                SignalResult(
+                    name=FUSION_SIGNAL_NAME,
+                    status="ok",
+                    categories=fused,
+                    reason="Fused calibrated sensor evidence via weighted noisy-OR.",
+                    raw={
+                        "contributions": {c: cat.contributions for c, cat in fusion.categories.items()},
+                        "agreement": {c: cat.agreement for c, cat in fusion.categories.items()},
+                    },
+                )
+            )
+        else:
+            fused = {}
+            for scores in signal_scores.values():
+                for code, score in scores.items():
+                    fused[code] = max(fused.get(code, 0.0), score)
 
         response = self.engine.decide(self._request, signals)
-
-        signal_scores: dict[str, dict[str, float]] = {}
-        fused: dict[str, float] = {}
-        for signal in signals:
-            if signal.status != "ok":
-                continue
-            signal_scores[signal.name] = dict(signal.categories)
-            for code, score in signal.categories.items():
-                fused[code] = max(fused.get(code, 0.0), score)
 
         return ClassifierResult(
             verdict=response.verdict,

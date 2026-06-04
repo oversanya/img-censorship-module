@@ -121,6 +121,7 @@ const signalLabels = {
   ocr_text_guard_stub: "Текстовый фильтр OCR",
   ocr_text_guard_heuristic: "Текстовый фильтр OCR",
   policy_judge_heuristic: "Эвристический арбитр политики",
+  policy_fusion: "Сведение сигналов (fusion)",
   policy_judge_shieldgemma: "Мультимодальный арбитр ShieldGemma",
   ocr_adapter: "OCR текста на изображении",
   visual_classifier: "Визуальный классификатор",
