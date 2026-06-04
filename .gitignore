@@ -15,6 +15,7 @@ __pycache__/
 # Экспортируемый use-case датасет (может содержать NSFW — не коммитим)
 use_case_dataset/
 *.zip
+censor_benchmark_datasets.md
 
 # Картинки, которые пользователь кладёт в edge_cases (README остаётся в репо)
 edge_cases/**
