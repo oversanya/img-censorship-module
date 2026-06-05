@@ -60,8 +60,8 @@ class GuardrailPipeline:
             review_threshold=self.settings.review_threshold,
         )
 
-        self.string_guard = StringGuard()
-        self.image_analyzer = ImageAnalyzer()
+        self.string_guard = StringGuard(enabled=self.settings.enable_injection_revealer)
+        self.image_analyzer = ImageAnalyzer(enabled=self.settings.enable_image_sanitizer)
         self.use_guardrails = True
 
     def assess(self, image, prompt):
