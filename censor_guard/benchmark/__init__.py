@@ -1,18 +1,21 @@
 """Бенчмарк-харнесс для image-классификатора цензор-модуля.
 
 Один публичный вход — :func:`run_benchmark`. Гоняет реальный классификатор
-(`censor_guard.evaluation.ImageClassifierRunner`) по набору датасетов из
-`censor_benchmark_datasets.md`, считает метрики (общие, по категориям таксономии
-и по датасетам), строит графики и печатает/сохраняет подробный отчёт.
+(`censor_guard.evaluation.ImageClassifierRunner` = CLIP zero-shot + NSFW-детектор)
+по курируемому датасету `vekshinkir/image-censorship-small` (split `benchmarking`),
+считает метрики (общие, по категориям таксономии, по источникам, AI-vs-реальные,
+adversarial/edge-case), строит интерактивные Plotly-графики и собирает
+самодостаточный HTML-дашборд.
 
 Запуск одной командой:
 
-    python -m censor_guard.benchmark --n-dataset 100 --save-report
+    python -m censor_guard.benchmark --limit 60
 
 Или программно:
 
-    from censor_guard.benchmark import run_benchmark
-    result = run_benchmark(n_dataset=100, save_report=True)
+    from censor_guard.benchmark import run_benchmark, show_figures
+    result = run_benchmark(split="benchmarking")
+    show_figures(result["figures"])
 """
 
 from __future__ import annotations

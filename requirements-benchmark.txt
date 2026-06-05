@@ -2,8 +2,7 @@
 # Ставить поверх requirements.txt + requirements-ml.txt
 datasets>=2.19,<5.0
 scikit-learn>=1.4,<2.0
-matplotlib>=3.8,<4.0
-seaborn>=0.13,<1.0
+plotly>=5.20,<6.0
 pandas>=2.2,<4.0
 tqdm>=4.66,<5.0
 huggingface-hub>=0.23,<1.0

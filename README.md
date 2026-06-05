@@ -137,46 +137,41 @@ python -m censor_guard.cli --scenario output --image-path path/to/image.png
 
 ## Бенчмарк и метрики
 
-Полный бенчмарк-харнесс гоняет реальный image-классификатор по датасетам из
-[`censor_benchmark_datasets.md`](censor_benchmark_datasets.md) и считает метрики
-по всему пулу, по каждой категории таксономии и по каждому датасету.
+Бенчмарк-харнесс гоняет реальный image-классификатор по курируемому датасету
+[`vekshinkir/image-censorship-small`](https://huggingface.co/datasets/vekshinkir/image-censorship-small)
+(split `benchmarking`, 690 размеченных картинок) и считает метрики по всему пулу,
+по каждой категории таксономии, по источникам и по AI-vs-реальным.
 
 ```bash
 pip install -r requirements-benchmark.txt
-# gated-датасеты (🔒) подтянутся при наличии HF_TOKEN:
-export HF_TOKEN=hf_...
-python -m censor_guard.benchmark --n-dataset 100 --save-report
+python -m censor_guard.benchmark              # весь split benchmarking
+python -m censor_guard.benchmark --limit 60   # быстрая проба
 ```
 
 Что делает:
-- двухфазный прогресс с ETA (загрузка датасетов → классификация);
+- прогресс-бар классификации с ETA (загрузка ~мгновенна из кэша HF);
 - метрики: accuracy / precision / recall / F1 / FPR / ROC-AUC / PR-AUC, отдельно
-  по категориям (one-vs-rest) и по датасетам; блок латентности (warmup, p95/p99,
-  throughput); отдельный учёт adversarial / hard-negative;
-- графики (confusion matrix, распределение score, ROC, метрики по категориям и
-  датасетам, латентность);
+  по категориям (one-vs-rest), по источникам данных и по срезу AI-генерация vs
+  реальные; блок латентности (warmup, p95/p99, throughput);
+- **отдельная секция устойчивости**: recall на adversarial-обфускациях
+  (текст/шум/поворот/текстура) и FPR на edge-case hard-negatives — не размывают
+  headline-метрики;
+- **интерактивные графики Plotly** (матрица ошибок, распределение score, ROC по
+  категориям, метрики по категориям, срезы по источникам и AI, латентность);
 - подробный текстовый отчёт в консоль с вербальной оценкой по каждой категории;
-- при `--save-report` — папка `reports/benchmark_<timestamp>/` с `report.md`,
-  `dashboard.html`, `predictions.csv`, `metrics.json` и `figures/*.png`.
+- при `save_report` — папка `reports/benchmark_<timestamp>/` с самодостаточным
+  `dashboard.html` (plotly.js встроен инлайн, открывается без сервера),
+  `report.md`, `predictions.csv`, `metrics.json`.
 
-Полезные флаги: `--n-dataset N` (картинок на датасет), `--datasets a,b,c`
-(подмножество по ключам датасетов или кодам категорий), `--no-save-report`,
-`--no-html`, `--output-dir`, `--seed`, `--max-load-seconds` (лимит на один
-датасет, по умолчанию 120с), `--max-total-load-seconds` (общий лимит фазы
-загрузки, по умолчанию 300с — дальше оставшиеся датасеты пропускаются, чтобы
-прогон не «висел» на медленных/недоступных источниках).
+Полезные флаги: `--limit N` (ограничить число картинок), `--split`,
+`--no-save-report`, `--no-html`, `--output-dir`, `--seed`.
 
-Недоступные датасеты (gated без принятых условий, переехавшие/script-based, или
-зеркала без байтов картинок) автоматически пропускаются с понятной причиной —
-бенчмарк продолжает работу на доступных. Каждый источник грузится в отдельном
-потоке с жёстким таймаутом, поэтому зависшая сеть не блокирует прогон.
-
-Программно (например, из ноутбука):
+Программно (например, из ноутбука `notebooks/metrics_benchmark.ipynb`):
 
 ```python
-from censor_guard.benchmark import run_benchmark
-result = run_benchmark(n_dataset=100, save_report=True)
-result["figures"]["overview"]  # matplotlib-фигуры для inline-показа
+from censor_guard.benchmark import run_benchmark, show_figures
+result = run_benchmark(split="benchmarking", save_report=True)
+show_figures(result["figures"])  # интерактивные Plotly-графики inline
 ```
 
 ## Environment variables
