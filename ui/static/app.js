@@ -117,15 +117,16 @@ const hardBlockCategories = new Set([
 const signalLabels = {
   ui_policy_guard: "UI-фильтр запрещенных тем",
   text_guard_stub: "Текстовый фильтр промпта",
-  text_guard_heuristic: "Текстовый фильтр промпта",
+  text_guard: "Текстовый фильтр промпта",
   ocr_text_guard_stub: "Текстовый фильтр OCR",
-  ocr_text_guard_heuristic: "Текстовый фильтр OCR",
+  ocr_text_guard: "Текстовый фильтр OCR",
   policy_judge_heuristic: "Эвристический арбитр политики",
   policy_fusion: "Сведение сигналов (fusion)",
   policy_judge_shieldgemma: "Мультимодальный арбитр ShieldGemma",
   ocr_adapter: "OCR текста на изображении",
   visual_classifier: "Визуальный классификатор",
   explicit_content_detector: "Детектор откровенного контента",
+  llava_guard: "Визуальный VLM-судья (LlavaGuard)",
 };
 
 const statusLabels = {

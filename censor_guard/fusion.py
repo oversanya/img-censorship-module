@@ -12,8 +12,11 @@ from censor_guard.schemas import SignalResult
 DEFAULT_SENSOR_WEIGHTS: dict[str, float] = {
     "explicit_content_detector": 1.0,
     "policy_judge_shieldgemma": 1.0,
-    "text_guard_heuristic": 0.85,
-    "ocr_text_guard_heuristic": 0.85,
+    # Обученный policy-aware VLM — надёжнее zero-shot CLIP, но это всё ещё одна
+    # визуальная модель (коррелирует с CLIP), поэтому не 1.0.
+    "llava_guard": 0.95,
+    "text_guard": 0.85,
+    "ocr_text_guard": 0.85,
     "visual_classifier": 0.9,
 }
 DEFAULT_WEIGHT = 0.5

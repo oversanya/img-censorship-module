@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import unittest
 
-from censor_guard.adapters.text_classifier import TextGuardHeuristic
+from censor_guard.adapters.text_classifier import TextGuard
 
 
-class TextGuardHeuristicTests(unittest.TestCase):
+class TextGuardTests(unittest.TestCase):
     def setUp(self) -> None:
         # model_id пустой → работает только лексиконный baseline (без сети).
-        self.guard = TextGuardHeuristic(enabled=True, model_id=None)
+        self.guard = TextGuard(enabled=True, model_id=None)
 
     def test_empty_text_skipped(self) -> None:
         self.assertEqual(self.guard.moderate("").status, "skipped")
@@ -34,7 +34,7 @@ class TextGuardHeuristicTests(unittest.TestCase):
         self.assertGreater(many, one)
 
     def test_disabled_skips(self) -> None:
-        guard = TextGuardHeuristic(enabled=False)
+        guard = TextGuard(enabled=False)
         self.assertEqual(guard.moderate("порно").status, "skipped")
 
 

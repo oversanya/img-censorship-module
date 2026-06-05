@@ -6,10 +6,11 @@ plus `output` checks on generated results.
 ## What is implemented
 
 - unified moderation API for input and output checks
-- **text guard** (`text_guard_heuristic`): RU/EN ML toxicity model (`cointegrated/rubert-tiny-toxicity` by default) fused with a stem lexicon; runs on both the prompt and OCR text
+- **text guard** (`text_guard`): RU/EN ML toxicity model (`cointegrated/rubert-tiny-toxicity` by default) fused with a stem lexicon; runs on both the prompt and OCR text
 - **OCR adapter** for text baked into images
 - **visual classifier** (zero-shot CLIP) — calibrated against a "safe" anchor so raw softmax noise no longer drives the verdict
 - **explicit-content detector** (NSFW specialist)
+- **LlavaGuard** (`llava_guard`): always-on trained policy-aware VLM (LlavaGuard-0.5B by default) — a second independent visual sensor alongside CLIP; verdicts mapped into the taxonomy
 - **policy judge** = calibrated **fusion** (weighted noisy-OR) of all sensors + a **ShieldGemma escalation point** for borderline cases
 - rule-based **decision engine** with `allow / review / block`
 - a **web UI demo**, an HTTP API, and a CLI
@@ -36,20 +37,38 @@ decides `allow / review / block`.
 
 ## Quick start
 
-1. Create an environment with Python 3.11+.
+1. Create and activate a virtual environment with Python 3.11+:
+
+```bash
+python -m venv .venv
+# Windows:        .venv\Scripts\activate
+# macOS / Linux:  source .venv/bin/activate
+```
+
 2. Install the base dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. For the ML sensors (visual classifier, NSFW detector, text toxicity model) install the extra ML deps:
+3. For the ML sensors (visual classifier, NSFW detector, text toxicity model, LlavaGuard) install the extra ML deps:
 
 ```bash
 pip install -r requirements-ml.txt
 ```
 
+This installs **CPU** wheels by default. For an NVIDIA GPU, install torch + torchvision from the CUDA index first, then the ML file:
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+pip install -r requirements-ml.txt
+```
+
 Without these the service still runs — the ML sensors just report `skipped` (graceful degradation).
+
+> **First run downloads model weights** into `.cache/huggingface` (LlavaGuard-0.5B is ~2 GB).
+> On CPU LlavaGuard adds ~10–30 s per image; set `CENSOR_ENABLE_LLAVA_GUARD=false` to skip it
+> (and its download) if you don't need the trained visual judge.
 
 4. Install the Tesseract binary for your OS (needed only for OCR):
 
@@ -83,8 +102,8 @@ image (optional), press **Проверить**.
 
 **What happens under the hood on submit** (`GuardrailPipeline.moderate`):
 1. the **prompt** goes through the text guard (ML toxicity + lexicon);
-2. **OCR** extracts text from the image; that text goes through the text guard again (`ocr_text_guard_heuristic`);
-3. the **visual classifier** (calibrated CLIP) and the **NSFW detector** score the image;
+2. **OCR** extracts text from the image; that text goes through the text guard again (`ocr_text_guard`);
+3. the **visual classifier** (calibrated CLIP), the **NSFW detector**, and **LlavaGuard** (trained VLM judge) score the image;
 4. the **policy judge** fuses all sensor scores per category via weighted noisy-OR; if any
    category lands in the gray zone `[review, block)` or it's an `output` stage with risk,
    it tries to **escalate to ShieldGemma** (currently a `skipped` stub until inference is wired);
@@ -166,10 +185,13 @@ result["figures"]["overview"]  # matplotlib-фигуры для inline-пока�
 - `CENSOR_ENABLE_VISUAL_CLASSIFIER=true|false`
 - `CENSOR_ENABLE_EXPLICIT_DETECTOR=true|false`
 - `CENSOR_ENABLE_TEXT_GUARD=true|false`
+- `CENSOR_ENABLE_LLAVA_GUARD=true|false` — always-on trained visual judge (~10–30 s/image on CPU)
 - `CENSOR_ENABLE_POLICY_JUDGE=true|false` — enables ShieldGemma escalation (fusion runs regardless)
 - `CENSOR_VISUAL_MODEL_ID=openai/clip-vit-base-patch32`
 - `CENSOR_EXPLICIT_MODEL_ID=Falconsai/nsfw_image_detection`
 - `CENSOR_TEXT_MODEL_ID=cointegrated/rubert-tiny-toxicity` — empty string = lexicon only
+- `CENSOR_LLAVA_GUARD_MODEL_ID=AIML-TUDA/LlavaGuard-v1.2-0.5B-OV-hf`
+- `CENSOR_LLAVA_GUARD_MAX_NEW_TOKENS=24` · `CENSOR_LLAVA_GUARD_UNSAFE_SCORE=0.9`
 - `CENSOR_POLICY_JUDGE_MODEL_ID=google/shieldgemma-2-4b-it`
 - `CENSOR_BLOCK_THRESHOLD=0.85`
 - `CENSOR_REVIEW_THRESHOLD=0.55`

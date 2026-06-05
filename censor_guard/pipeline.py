@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from censor_guard.adapters.explicit_detector import ExplicitContentAdapter
+from censor_guard.adapters.llava_guard import LlavaGuardAdapter
 from censor_guard.adapters.ocr import OCRAdapter
 from censor_guard.adapters.policy_judge import PolicyJudge
-from censor_guard.adapters.text_classifier import TextGuardHeuristic
+from censor_guard.adapters.text_classifier import TextGuard
 from censor_guard.adapters.visual_classifier import VisualClassifierAdapter
 from censor_guard.config import Settings
 from censor_guard.decision import DecisionEngine
@@ -28,7 +29,7 @@ class GuardrailPipeline:
 
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
-        self.text_guard = TextGuardHeuristic(
+        self.text_guard = TextGuard(
             enabled=self.settings.enable_text_guard,
             model_id=self.settings.text_model_id,
             cache_dir=self.settings.hf_cache_dir,
@@ -48,6 +49,13 @@ class GuardrailPipeline:
             enabled=self.settings.enable_explicit_detector,
             model_id=self.settings.explicit_model_id,
             cache_dir=self.settings.hf_cache_dir,
+        )
+        self.llava_guard = LlavaGuardAdapter(
+            enabled=self.settings.enable_llava_guard,
+            model_id=self.settings.llava_guard_model_id,
+            cache_dir=self.settings.hf_cache_dir,
+            max_new_tokens=self.settings.llava_guard_max_new_tokens,
+            unsafe_score=self.settings.llava_guard_unsafe_score,
         )
         self.policy_judge = PolicyJudge(
             enabled=self.settings.enable_policy_judge,
@@ -78,13 +86,15 @@ class GuardrailPipeline:
             if ocr_signal.text:
                 ocr_text = "\n".join(ocr_signal.text)
                 ocr_text_result = self.text_guard.moderate(ocr_text)
-                ocr_text_result.name = "ocr_text_guard_heuristic"
+                ocr_text_result.name = "ocr_text_guard"
                 signals.append(ocr_text_result)
 
-            # 3) Два визуальных сенсора: откалиброванный zero-shot классификатор и
-            #    узкоспециализированный детектор NSFW.
+            # 3) Визуальные сенсоры: откалиброванный zero-shot классификатор (CLIP),
+            #    узкоспециализированный детектор NSFW и обученный policy-aware судья
+            #    LlavaGuard (второй независимый голос по всем визуальным категориям).
             signals.append(self.visual.moderate(image))
             signals.append(self.explicit.moderate(image))
+            signals.append(self.llava_guard.moderate(image))
 
         # 4) Судья: сводит все собранные сигналы в policy_fusion (+ эскалация на
         #    ShieldGemma при необходимости). Работает и для текст-онли запросов.

@@ -155,6 +155,25 @@ TEXT_LEXICONS: dict[str, tuple[str, ...]] = {
 }
 
 
+# Маппинг таксономии LlavaGuard (O1–O9) → коды нашей таксономии. LlavaGuard —
+# обученный safety-VLM, он выдаёт ОДНУ доминирующую категорию из своих девяти +
+# бинарный rating Safe/Unsafe (см. adapters/llava_guard.py). Мы переводим её в наш
+# код. Где у LlavaGuard одна категория шире нашей (O1 = hate+harassment) или у нас
+# нет точного аналога (O8 животные, O9 катастрофы) — выбираем ближайший по тяжести
+# hard-код, чтобы реальный сигнал не терялся. Меняется здесь, в одном месте.
+LLAVAGUARD_CATEGORY_MAP: dict[str, str] = {
+    "O1": "hate_extremism",      # Hate, Humiliation, Harassment
+    "O2": "violence_gore",       # Violence, Harm, or Cruelty
+    "O3": "sexual",              # Sexual Content
+    "O4": "sexual",              # Nudity Content (отдельной «наготы» у нас нет)
+    "O5": "illegal_activity",    # Criminal Planning
+    "O6": "illegal_activity",    # Weapons or Substance Abuse
+    "O7": "self_harm",           # Self-Harm
+    "O8": "violence_gore",       # Animal Cruelty (ближе всего к gore/жестокости)
+    "O9": "shocking",            # Disasters or Emergencies (графичное/тревожное)
+}
+
+
 def is_known_category(code: str) -> bool:
     return code in CATEGORY_BY_CODE
 

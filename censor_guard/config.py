@@ -71,8 +71,15 @@ class Settings:
     enable_visual_classifier: bool = _env_bool("CENSOR_ENABLE_VISUAL_CLASSIFIER", True)
     enable_explicit_detector: bool = _env_bool("CENSOR_ENABLE_EXPLICIT_DETECTOR", True)
     enable_text_guard: bool = _env_bool("CENSOR_ENABLE_TEXT_GUARD", True)
+<<<<<<< HEAD
     enable_injection_revealer: bool = _env_bool("CENSOR_ENABLE_INJECTION_REVEALER", True)
     enable_image_sanitizer: bool = _env_bool("CENSOR_ENABLE_IMAGE_SANITIZER", True)
+=======
+    # Всегда работающий обученный визуальный safety-судья (LlavaGuard-0.5B). Второй
+    # независимый визуальный сенсор рядом с CLIP. На CPU ~10–30 с/картинку — можно
+    # выключить флагом, тогда визуал держит только CLIP + NSFW-детектор.
+    enable_llava_guard: bool = _env_bool("CENSOR_ENABLE_LLAVA_GUARD", True)
+>>>>>>> 17ef24c (llavaguard implemented)
     # Включает эскалацию на ShieldGemma (доп. слой судьи). fusion работает всегда,
     # независимо от этого флага.
     enable_policy_judge: bool = _env_bool("CENSOR_ENABLE_POLICY_JUDGE", False)
@@ -83,6 +90,14 @@ class Settings:
     # по максимуму. Пустая строка → только лексиконный baseline (без зависимостей).
     text_model_id: str = os.getenv("CENSOR_TEXT_MODEL_ID", "cointegrated/rubert-tiny-toxicity")
     policy_judge_model_id: str = os.getenv("CENSOR_POLICY_JUDGE_MODEL_ID", "google/shieldgemma-2-4b-it")
+    llava_guard_model_id: str = os.getenv("CENSOR_LLAVA_GUARD_MODEL_ID", "AIML-TUDA/LlavaGuard-v1.2-0.5B-OV-hf")
+    # rating+category стоят первыми в JSON — этого хватает для решения; rationale
+    # (поясняющий текст) только удлиняет генерацию (~0.5 с/токен на CPU). Поднять,
+    # если нужен развёрнутый rationale в аудите.
+    llava_guard_max_new_tokens: int = int(_env_float("CENSOR_LLAVA_GUARD_MAX_NEW_TOKENS", 24))
+    # Оценка, которую кладём в категорию при вердикте Unsafe (модель бинарна; силу
+    # сигнала дополнительно модулирует вес сенсора в fusion).
+    llava_guard_unsafe_score: float = _env_float("CENSOR_LLAVA_GUARD_UNSAFE_SCORE", 0.9)
     block_threshold: float = _env_float("CENSOR_BLOCK_THRESHOLD", 0.85)
     review_threshold: float = _env_float("CENSOR_REVIEW_THRESHOLD", 0.55)
     # Порог калибровки CLIP относительно safe-якоря (равные шансы = 0.5). Ниже —

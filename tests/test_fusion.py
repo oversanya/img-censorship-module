@@ -36,7 +36,7 @@ class FusionTests(unittest.TestCase):
 
     def test_skipped_signals_ignored(self) -> None:
         signals = [
-            SignalResult(name="text_guard_heuristic", status="skipped"),
+            SignalResult(name="text_guard", status="skipped"),
             SignalResult(name="explicit_content_detector", status="ok", categories={"sexual": 0.9}),
         ]
         result = fuse(signals)
