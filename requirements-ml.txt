@@ -1,3 +1,17 @@
-transformers>=4.41,<5.0
+# Heavy ML sensors: visual classifier (CLIP), NSFW detector, text toxicity model,
+# and LlavaGuard. Install AFTER requirements.txt:  pip install -r requirements-ml.txt
+#
+# By default this pulls CPU wheels (works on Windows/macOS/Linux). For an NVIDIA GPU
+# install torch + torchvision from the CUDA index FIRST, then this file, e.g.:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+#   pip install -r requirements-ml.txt
+
+# LLaVA-OneVision (LlavaGuard) support requires transformers >= 4.45.
+transformers>=4.45,<5.0
 torch>=2.3,<3.0
+torchvision>=0.18  # LlavaGuard: LLaVA-OneVision pulls in a video processor
 accelerate>=0.31,<1.0
+
+# Optional: faster Hugging Face model downloads (Xet protocol). Remove this line if
+# the wheel is unavailable for your platform — downloads still work over plain HTTP.
+hf_xet>=1.0

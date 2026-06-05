@@ -45,7 +45,7 @@ class DecisionWithFusionTests(unittest.TestCase):
             fusion_signal(
                 {"political_persuasion": 0.9},
                 agreement={"political_persuasion": 2},
-                sources={"political_persuasion": ["visual_classifier", "text_guard_heuristic"]},
+                sources={"political_persuasion": ["visual_classifier", "text_guard"]},
             )
         ]
         self.assertEqual(self.engine.decide(self.request, double).verdict, "block")

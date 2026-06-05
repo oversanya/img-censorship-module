@@ -173,11 +173,12 @@ function loadFile(f) {
 const VCOLOR = { allow:"--allow", review:"--review", block:"--block" };
 
 const SIGNAL_LABELS = {
-  text_guard_heuristic: "Текстовый фильтр промпта",
-  ocr_text_guard_heuristic: "Текстовый фильтр OCR-текста",
+  text_guard: "Текстовый фильтр промпта",
+  ocr_text_guard: "Текстовый фильтр OCR-текста",
   ocr_adapter: "OCR (текст на картинке)",
   visual_classifier: "Визуальный классификатор (zero-shot)",
   explicit_content_detector: "Детектор NSFW",
+  llava_guard: "Визуальный VLM-судья (LlavaGuard)",
   policy_fusion: "Сведение сигналов (fusion)",
   policy_judge_shieldgemma: "Судья ShieldGemma (эскалация)",
 };

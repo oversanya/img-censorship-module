@@ -7,6 +7,9 @@ from censor_guard.schemas import ModerationResponse, ModerationRequest, SignalRe
 from censor_guard.taxonomy import HARD_BLOCK_CATEGORIES, SOFT_REVIEW_CATEGORIES
 
 SHIELDGEMMA_SENSOR = "policy_judge_shieldgemma"
+# Обученные policy-aware судьи: их одиночного вердикта достаточно, чтобы
+# подтвердить soft-блок (наравне с согласием ≥2 дешёвых сенсоров).
+TRUSTED_JUDGES = (SHIELDGEMMA_SENSOR, "llava_guard")
 
 
 class DecisionEngine:
@@ -85,7 +88,7 @@ class DecisionEngine:
             if scores.get(category, 0.0) >= self.block_threshold
             and (
                 agreement.get(category, 0) >= 2
-                or SHIELDGEMMA_SENSOR in sources.get(category, [])
+                or any(judge in sources.get(category, []) for judge in TRUSTED_JUDGES)
             )
         ]
         blocked = set(hard_block_matches) | set(soft_block_matches)

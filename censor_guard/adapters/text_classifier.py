@@ -42,7 +42,7 @@ def _normalize(text: str) -> str:
     return text.lower().replace("ё", "е")
 
 
-class TextGuardHeuristic:
+class TextGuard:
     """Текстовый гард для промпта и OCR-текста.
 
     Базовый слой — лексиконный классификатор (без ML, всегда доступен): ищет в
@@ -57,7 +57,7 @@ class TextGuardHeuristic:
     деградируем к одному лексикону.
     """
 
-    name = "text_guard_heuristic"
+    name = "text_guard"
 
     def __init__(
         self,
