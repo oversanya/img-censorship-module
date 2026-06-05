@@ -9,6 +9,8 @@ from censor_guard.config import Settings
 from censor_guard.decision import DecisionEngine
 from censor_guard.image_utils import load_image
 from censor_guard.schemas import ModerationRequest, ModerationResponse
+from censor_guard.guardrails.image_guard import ImageAnalyzer
+from censor_guard.guardrails.string_guard import StringGuard
 
 
 class GuardrailPipeline:
@@ -58,11 +60,13 @@ class GuardrailPipeline:
             review_threshold=self.settings.review_threshold,
         )
 
-    def moderate(self, request: ModerationRequest) -> ModerationResponse:
-        # Каждый сенсор возвращает SignalResult — единый «конверт» с категориями
-        # и их оценками. Мы собираем их в список signals и в конце сводим воедино.
-        image = load_image(request)
-        signals = [self.text_guard.moderate(request.prompt)]
+        self.string_guard = StringGuard()
+        self.image_analyzer = ImageAnalyzer()
+        self.use_guardrails = True
+
+    def assess(self, image, prompt):
+        
+        signals = [self.text_guard.moderate(prompt)]
 
         if image is not None:
             # 1) OCR: вытаскиваем текст, вшитый в саму картинку.
@@ -93,5 +97,88 @@ class GuardrailPipeline:
             )
         )
 
-        # 5) Финальное решение allow / review / block по порогам.
+        return signals
+
+    def get_decision(self, request: ModerationRequest, image=None, prompt=None) -> ModerationResponse:
+        # Каждый сенсор возвращает SignalResult — единый «конверт» с категориями
+        # и их оценками. Мы собираем их в список signals и в конце сводим воедино.
+        if image is None:
+            image = load_image(request)
+        if prompt is None:
+            prompt = request.prompt
+
+        signals = self.assess(image, prompt)
+
         return self.decision_engine.decide(request, signals)
+
+    def compare_guarded(self, request: ModerationRequest):
+
+        resp_before = self.get_decision(request)
+        conf_before = resp_before.confidence
+        prompt = request.prompt
+
+        image = load_image(request)
+        sanitized = self.image_analyzer(image)
+
+        resp_after = self.get_decision(request, image=sanitized)
+        conf_after = resp_after.confidence
+
+        if resp_after.verdict != resp_before.verdict:
+            if abs(conf_before - conf_after) > 0.4:
+                return {
+                    "verdict": "block",
+                    "reason" : "suspicious image detected, highly unstable\n",
+                    "conf_before": conf_before,
+                    "conf_after": conf_after,
+                    "decision_after": resp_after
+                }
+            else:
+                return {
+                    "verdict": "pass",
+                    "reason": "no inconsistencies revealed",
+                    "conf_before": conf_before,
+                    "conf_after": conf_after,
+                    "decision_after": resp_after
+                }
+
+    def check_text_injections(self, prompt):
+        suspicious = self.string_guard.process(prompt)
+        return suspicious
+        
+
+    def moderate(self, request: ModerationRequest) -> ModerationResponse:
+        if request.stage == "output":
+            self.use_guardrails = False
+
+        prompt = request.prompt
+    
+        if request.stage == "input":
+            prompt_analysis = self.check_text_injections(prompt)
+            if prompt_analysis['safe'] == False:
+                return ModerationResponse(
+                    request_id=request.request_id,
+                    scenario=request.scenario,
+                    stage=request.stage,
+                    verdict="block",
+                    categories={},
+                    confidence=list(prompt_analysis['confidence'].values())[0],
+                    reason=prompt_analysis['reasons'],
+                    notes=["input prompt guardrail"]
+                )
+
+        inconsistency_test = self.compare_guarded(request)
+
+        if self.use_guardrails:
+            if inconsistency_test["verdict"] == "block":
+                return ModerationResponse(
+                    request_id=request.request_id,
+                    scenario=request.scenario,
+                    stage=request.stage,
+                    verdict="block",
+                    categories={},
+                    confidence=abs(inconsistency_test['conf_before'] - inconsistency_test['conf_after']),
+                    reason=inconsistency_test['reason'],
+                    notes=["input image guardrailing"]
+                )
+
+        return inconsistency_test['decision_after']
