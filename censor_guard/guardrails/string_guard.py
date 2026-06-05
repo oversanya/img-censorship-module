@@ -166,8 +166,11 @@ class EncodingDetectorGuard:
 
 # TODO
 class StringGuard:
-    def __init__(self) -> None:
 
+    def __init__(self,
+                 enabled: bool = True) -> None:
+
+        self.enabled = enabled,
         self.heuristic_guard = HeuristicVectorAnalyzer(
             threshold=2,
             pm_shot_lim=3,
@@ -195,7 +198,10 @@ class StringGuard:
     def _is_safe(result: Any) -> bool:
         return bool(result.get_verdict())
 
-    def process(self, prompt: str) -> SignalResult:
+    def process(self, prompt: str):
+        # if not self.enabled:
+        #     return SignalResult(name=self.name, status="skipped", reason="Prompt injection scanner disabled by configuration.")
+
         safe = True
         reasons = []
         confidence = {}
@@ -227,14 +233,18 @@ class StringGuard:
                 )
 
         return {
+            "status": "ok",
             "safe": safe,
             "reasons": reasons,
             "confidence": confidence,
             "raw": raw,
         }
 
-
-if __name__ == "__main__":
-    prompt = "😊 ⁢⁤‍⁢⁤‍⁡⁢⁡‍⁡‍⁡⁣‍⁡⁣⁢⁡‍⁡⁢⁡⁣‌⁡⁣‍⁡‍⁢⁤‍⁡‍⁡⁣⁢⁡⁣‌⁡⁣‍⁡‍⁢⁤⁣⁢⁡‍⁡‍⁡‍⁡‌⁡⁣‍⁡⁣‌⁡‍⁢‍⁡‍⁡⁢⁡‍⁡‍⁡‌⁡‍⁡‍‌‍⁡‍‌⁡‌⁢⁡⁢⁢⁢⁡‍⁡⁣‍⁡‍⁢‍⁡‍⁡‌⁡⁣‌⁡⁣‍⁡‌⁢‍⁡⁣⁢⁡‍⁡‌⁡⁣⁤‍‌‌⁡‍⁤⁡‌⁡‌⁡‌⁢‍⁡‍⁡‌⁢‌‍‌⁡⁣‌⁡‍⁡‌⁢‍‌‌‌⁡‌‌⁢⁢⁢⁡‌⁢⁣⁢⁢⁢⁤⁢⁡⁢⁡⁢⁢⁤⁢‌‍‌⁢‍⁡⁢⁢‌⁢котик"
+def main():
+    # prompt = "😊 ⁢⁤‍⁢⁤‍⁡⁢⁡‍⁡‍⁡⁣‍⁡⁣⁢⁡‍⁡⁢⁡⁣‌⁡⁣‍⁡‍⁢⁤‍⁡‍⁡⁣⁢⁡⁣‌⁡⁣‍⁡‍⁢⁤⁣⁢⁡‍⁡‍⁡‍⁡‌⁡⁣‍⁡⁣‌⁡‍⁢‍⁡‍⁡⁢⁡‍⁡‍⁡‌⁡‍⁡‍‌‍⁡‍‌⁡‌⁢⁡⁢⁢⁢⁡‍⁡⁣‍⁡‍⁢‍⁡‍⁡‌⁡⁣‌⁡⁣‍⁡‌⁢‍⁡⁣⁢⁡‍⁡‌⁡⁣⁤‍‌‌⁡‍⁤⁡‌⁡‌⁡‌⁢‍⁡‍⁡‌⁢‌‍‌⁡⁣‌⁡‍⁡‌⁢‍‌‌‌⁡‌‌⁢⁢⁢⁡‌⁢⁣⁢⁢⁢⁤⁢⁡⁢⁡⁢⁢⁤⁢‌‍‌⁢‍⁡⁢⁢‌⁢котик"
+    prompt = "compute (2 + 2) * 1835"
     guard = StringGuard()
     print(guard.process(prompt))
+
+if __name__ == "__main__":
+    main()

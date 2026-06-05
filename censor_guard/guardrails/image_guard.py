@@ -1,5 +1,5 @@
-from image_preprocess import ImagePreprocessor, ImageDenoiser
-from image_steganalysis import ImageSteganalysis
+from censor_guard.guardrails.image_preprocess import ImagePreprocessor, ImageDenoiser
+from censor_guard.guardrails.image_steganalysis import ImageSteganalysis
 # from censor_guard.schemas import SignalResult
 
 from pathlib import Path
@@ -10,7 +10,9 @@ import matplotlib.pyplot as plt
 # Denoises the image, sanitizes it and returns its residual metrics (high texture)
 class ImageAnalyzer:
 
-    def __init__(self):
+    def __init__(self,
+                enabled: bool = True):
+        self.enabled = enabled
         self.preprocessor = ImagePreprocessor()
         self.steganalysis = ImageSteganalysis()
         self.denoiser = ImageDenoiser()
@@ -20,13 +22,6 @@ class ImageAnalyzer:
     def sanitize(self, image):
         return self.preprocessor.preprocess(image)
 
-    # def is_usable(self, image):
-
-    #     residual = self.steganalysis.process(
-    #         image
-    #     )
-
-    #     return (residual < self.max_residual_energy, residual)
 
     def process(self, image):
 

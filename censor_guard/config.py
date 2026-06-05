@@ -71,6 +71,8 @@ class Settings:
     enable_visual_classifier: bool = _env_bool("CENSOR_ENABLE_VISUAL_CLASSIFIER", True)
     enable_explicit_detector: bool = _env_bool("CENSOR_ENABLE_EXPLICIT_DETECTOR", True)
     enable_text_guard: bool = _env_bool("CENSOR_ENABLE_TEXT_GUARD", True)
+    enable_injection_revealer: bool = _env_bool("CENSOR_ENABLE_INJECTION_REVEALER", True)
+    enable_image_sanitizer: bool = _env_bool("CENSOR_ENABLE_IMAGE_SANITIZER", True)
     # Включает эскалацию на ShieldGemma (доп. слой судьи). fusion работает всегда,
     # независимо от этого флага.
     enable_policy_judge: bool = _env_bool("CENSOR_ENABLE_POLICY_JUDGE", False)
