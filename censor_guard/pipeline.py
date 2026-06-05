@@ -72,8 +72,8 @@ class GuardrailPipeline:
         self.image_analyzer = ImageAnalyzer(enabled=self.settings.enable_image_sanitizer)
         self.use_guardrails = True
 
-    def assess(self, image, prompt):
-        
+    def assess(self, image, prompt, stage):
+
         signals = [self.text_guard.moderate(prompt)]
 
         if image is not None:
@@ -101,9 +101,9 @@ class GuardrailPipeline:
         signals.extend(
             self.policy_judge.judge(
                 image=image,
-                prompt=request.prompt,
+                prompt=prompt,
                 signals=signals,
-                stage=request.stage,
+                stage=stage,
             )
         )
 
@@ -117,7 +117,7 @@ class GuardrailPipeline:
         if prompt is None:
             prompt = request.prompt
 
-        signals = self.assess(image, prompt)
+        signals = self.assess(image, prompt, request.stage)
 
         return self.decision_engine.decide(request, signals)
 
@@ -128,28 +128,29 @@ class GuardrailPipeline:
         prompt = request.prompt
 
         image = load_image(request)
-        sanitized = self.image_analyzer(image)
+        sanitized = self.image_analyzer.process(image)["image"]
 
         resp_after = self.get_decision(request, image=sanitized)
         conf_after = resp_after.confidence
 
-        if resp_after.verdict != resp_before.verdict:
-            if abs(conf_before - conf_after) > 0.4:
-                return {
-                    "verdict": "block",
-                    "reason" : "suspicious image detected, highly unstable\n",
-                    "conf_before": conf_before,
-                    "conf_after": conf_after,
-                    "decision_after": resp_after
-                }
-            else:
-                return {
-                    "verdict": "pass",
-                    "reason": "no inconsistencies revealed",
-                    "conf_before": conf_before,
-                    "conf_after": conf_after,
-                    "decision_after": resp_after
-                }
+        if resp_after.verdict != resp_before.verdict and abs(conf_before - conf_after) > 0.4:
+            return {
+                "verdict": "block",
+                "reason": "suspicious image detected, highly unstable\n",
+                "conf_before": conf_before,
+                "conf_after": conf_after,
+                "decision_after": resp_after
+            }
+
+        # Вердикты совпали (картинка стабильна к санации) либо разошлись, но в
+        # пределах допустимого разброса уверенности — несогласованности нет.
+        return {
+            "verdict": "pass",
+            "reason": "no inconsistencies revealed",
+            "conf_before": conf_before,
+            "conf_after": conf_after,
+            "decision_after": resp_after
+        }
 
     def check_text_injections(self, prompt):
         suspicious = self.string_guard.process(prompt)
@@ -157,8 +158,10 @@ class GuardrailPipeline:
         
 
     def moderate(self, request: ModerationRequest) -> ModerationResponse:
-        if request.stage == "output":
-            self.use_guardrails = False
+        # Локально на запрос: output-стадия проверяет уже сгенерированный результат,
+        # image-guardrail там не нужен. Не трогаем self, иначе один output-запрос
+        # выключил бы guardrail для всех последующих (pipeline — общий синглтон).
+        use_guardrails = self.use_guardrails and request.stage != "output"
 
         prompt = request.prompt
     
@@ -178,7 +181,7 @@ class GuardrailPipeline:
 
         inconsistency_test = self.compare_guarded(request)
 
-        if self.use_guardrails:
+        if use_guardrails:
             if inconsistency_test["verdict"] == "block":
                 return ModerationResponse(
                     request_id=request.request_id,
