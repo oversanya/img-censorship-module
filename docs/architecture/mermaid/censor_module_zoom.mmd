@@ -1,0 +1,37 @@
+---
+title: Зум внутрь Censor Module
+---
+%%{init: {"flowchart": {"htmlLabels": true, "nodeSpacing": 34, "rankSpacing": 52}, "themeVariables": {"fontSize": "13px"}}}%%
+flowchart LR
+  %% Только блоки Censor Module. Внешние части общей схемы показаны подписями на стрелках.
+
+  requestIn((" "))
+  contextIn((" "))
+  responseOut((" "))
+
+  textCheck["<b>Проверка<br/>текстового запроса</b><br/>TextGuardHeuristic<br/>prompt"]
+  imageTextCheck["<b>Проверка входного<br/>изображения и текста</b><br/>GuardrailPipeline<br/>OCR + text guard<br/>Visual CLIP + NSFW<br/>SignalResult[] -> policy_fusion"]
+  inputDecision["<b>Решение<br/>по входным данным</b><br/>DecisionEngine<br/>thresholds"]
+  outputContextCheck["<b>Проверка сгенерированного изображения<br/>в контексте текстового запроса<br/>и входного изображения</b><br/>GuardrailPipeline<br/>same sensors<br/>policy_fusion"]
+  decision["<b>Решение цензор-модуля</b><br/>DecisionEngine<br/>ModerationResponse<br/>evidence + notes"]
+  audit["<b>Журнал модерации</b>"]
+
+  legend["<b>Наш Censor Module</b><br/>готовая зона"]
+
+  requestIn -->|"ModerationRequest / prompt"| textCheck
+  requestIn -->|"image + text"| imageTextCheck
+  textCheck --> inputDecision
+  imageTextCheck --> inputDecision
+  inputDecision -->|"allow через генератор изображений"| outputContextCheck
+  inputDecision -->|"review / block"| decision
+  contextIn -. "контекст запроса" .-> outputContextCheck
+  outputContextCheck --> decision
+  decision -->|"ModerationResponse"| responseOut
+  decision -. "решение и причины" .-> audit
+  audit ~~~ legend
+
+  classDef core fill:#e8fff3,stroke:#059669,stroke-width:2px,color:#0f172a;
+  classDef ghost fill:transparent,stroke:transparent,color:transparent;
+
+  class textCheck,imageTextCheck,inputDecision,outputContextCheck,decision,audit,legend core;
+  class requestIn,contextIn,responseOut ghost;
