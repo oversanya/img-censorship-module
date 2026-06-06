@@ -81,10 +81,22 @@ def binary_block(y_true: np.ndarray, y_pred: np.ndarray, scores: np.ndarray) -> 
     }
 
 
-def overall_metrics(df: pd.DataFrame) -> dict[str, Any]:
-    """Общие метрики Safe vs Unsafe по всем размеченным НЕ-adversarial строкам."""
+def _clean_mask(df: pd.DataFrame) -> pd.Series:
+    """Маска «чистого» набора для headline-метрик.
+
+    Исключает adversarial-обфускации и edge-case hard-negatives — они считаются
+    отдельными секциями (robustness / edge-case FPR), чтобы не размывать базовое
+    качество. Колонка `is_edge_case` опциональна (старые таблицы без неё работают).
+    """
     mask = df["true_unsafe"].notna() & (~df["adversarial"].astype(bool))
-    sub = df[mask]
+    if "is_edge_case" in df.columns:
+        mask &= ~df["is_edge_case"].astype(bool)
+    return mask
+
+
+def overall_metrics(df: pd.DataFrame) -> dict[str, Any]:
+    """Общие метрики Safe vs Unsafe по «чистому» набору (без adversarial/edge)."""
+    sub = df[_clean_mask(df)]
     if sub.empty:
         return {"n": 0, "note": "нет размеченных строк"}
     return binary_block(
@@ -97,14 +109,14 @@ def overall_metrics(df: pd.DataFrame) -> dict[str, Any]:
 def per_category_metrics(df: pd.DataFrame) -> dict[str, dict[str, Any]]:
     """Метрики по каждому коду таксономии (one-vs-rest).
 
-    Положительные = unsafe-картинки с `true_category == code`.
-    Отрицательные = все safe-негативы (true_unsafe == False, не adversarial).
+    Положительные = «чистые» unsafe-картинки с `true_category == code`.
+    Отрицательные = все safe-негативы из «чистого» набора (без adversarial/edge).
     Скор = `score_<code>` (слитая оценка движка по этой категории).
     Доп. «attribution» — доля пойманных позитивов, где код реально попал в
     предсказанные категории движка.
     """
-    neg_mask = (df["true_unsafe"] == False) & (~df["adversarial"].astype(bool))  # noqa: E712
-    negatives = df[neg_mask]
+    clean = df[_clean_mask(df)]
+    negatives = clean[clean["true_unsafe"] == False]  # noqa: E712
 
     out: dict[str, dict[str, Any]] = {}
     for spec in CATEGORY_SPECS:
@@ -112,7 +124,7 @@ def per_category_metrics(df: pd.DataFrame) -> dict[str, dict[str, Any]]:
         score_col = f"score_{code}"
         if score_col not in df.columns:
             continue
-        pos = df[(df["true_unsafe"] == True) & (df["true_category"] == code)]  # noqa: E712
+        pos = clean[(clean["true_unsafe"] == True) & (clean["true_category"] == code)]  # noqa: E712
         if pos.empty:
             out[code] = {"label": spec.label, "n_positive": 0, "supported": False}
             continue
@@ -192,6 +204,50 @@ def adversarial_metrics(df: pd.DataFrame) -> dict[str, Any]:
     return out
 
 
+def slice_metrics(df: pd.DataFrame, by: str) -> list[dict[str, Any]]:
+    """Бинарные метрики по значениям колонки `by` на «чистом» наборе.
+
+    Срез помогает увидеть перекосы качества — например AI-генерация vs реальные
+    фото (`by="ai_generated"`). Группы без обоих классов считаются как all-safe
+    (FPR) или all-unsafe (recall).
+    """
+    if by not in df.columns:
+        return []
+    clean = df[_clean_mask(df)]
+    rows: list[dict[str, Any]] = []
+    for value, sub in clean.groupby(by, sort=True):
+        y_true = sub["true_unsafe"].to_numpy(dtype=bool)
+        row: dict[str, Any] = {by: str(value), "n": int(len(sub)),
+                               "n_positive": int(y_true.sum()), "n_negative": int((~y_true).sum())}
+        if sub["true_unsafe"].nunique() > 1:
+            block = binary_block(y_true, sub["flagged"].to_numpy(dtype=bool),
+                                 sub["unsafe_score"].to_numpy(dtype=float))
+            row.update(recall=block["recall"], precision=block["precision"],
+                       f1=block["f1"], fpr=block["fpr"], roc_auc=block["roc_auc"])
+        elif y_true.all():
+            row["recall"] = _round(sub["flagged"].mean())
+        else:
+            row["fpr"] = _round(sub["flagged"].mean())
+        rows.append(row)
+    return rows
+
+
+def edge_case_metrics(df: pd.DataFrame) -> dict[str, Any]:
+    """FPR на edge-case hard-negatives (безопасные картинки, похожие на нарушения)."""
+    if "is_edge_case" not in df.columns:
+        return {"n": 0}
+    edge = df[df["is_edge_case"].astype(bool)]
+    if edge.empty:
+        return {"n": 0}
+    safe = edge[edge["true_unsafe"] == False]  # noqa: E712
+    out: dict[str, Any] = {"n": int(len(edge))}
+    if not safe.empty:
+        out["fpr"] = _round(safe["flagged"].mean())
+        out["n_safe"] = int(len(safe))
+        out["n_false_block"] = int(safe["flagged"].sum())
+    return out
+
+
 def latency_metrics(df: pd.DataFrame, warmup_seconds: float, wall_seconds: float) -> dict[str, Any]:
     lat = df["latency_s"].to_numpy(dtype=float)
     lat = lat[lat > 0]
@@ -221,6 +277,8 @@ def compute_all(df: pd.DataFrame, *, warmup_seconds: float, wall_seconds: float,
         "overall": overall_metrics(df),
         "per_category": per_category_metrics(df),
         "per_dataset": per_dataset_metrics(df),
+        "by_ai_generated": slice_metrics(df, "ai_generated"),
+        "edge_case": edge_case_metrics(df),
         "adversarial": adversarial_metrics(df),
     }
 

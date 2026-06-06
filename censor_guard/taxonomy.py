@@ -83,10 +83,95 @@ CATEGORY_SPECS: tuple[CategorySpec, ...] = (
 
 CATEGORY_BY_CODE = {spec.code: spec for spec in CATEGORY_SPECS}
 VISUAL_LABEL_TO_CODE = {spec.label: spec.code for spec in CATEGORY_SPECS}
-SAFE_VISUAL_LABEL = "safe everyday image"
-VISUAL_LABELS = [spec.label for spec in CATEGORY_SPECS] + [SAFE_VISUAL_LABEL]
+
+# Несколько нейтральных «якорей безопасности». Zero-shot классификатор softmax-ит
+# оценки по ВСЕМ переданным меткам, поэтому без сильного безопасного якоря у любой
+# картинки всегда «побеждает» какая-то категория нарушения. Чем больше формулировок
+# безопасного, тем устойчивее базовая линия, относительно которой мы калибруем
+# (см. calibration.py). Первый элемент сохранён как SAFE_VISUAL_LABEL для совместимости.
+SAFE_VISUAL_LABELS = (
+    "safe everyday image",
+    "neutral ordinary photo",
+    "harmless normal content",
+    "wholesome safe-for-work image",
+)
+SAFE_VISUAL_LABEL = SAFE_VISUAL_LABELS[0]
+SAFE_VISUAL_LABEL_SET = set(SAFE_VISUAL_LABELS)
+VISUAL_LABELS = [spec.label for spec in CATEGORY_SPECS] + list(SAFE_VISUAL_LABELS)
 HARD_BLOCK_CATEGORIES = {spec.code for spec in CATEGORY_SPECS if spec.hard_block}
 SOFT_REVIEW_CATEGORIES = {spec.code for spec in CATEGORY_SPECS if not spec.hard_block}
+
+
+# Текстовые лексиконы для базового (без ML) текстового классификатора.
+# Хранятся как СТЕМЫ в нижнем регистре: совпадение проверяется по границе слова с
+# учётом, что у русского богатая морфология (поэтому "убива" поймает "убивать",
+# "убивают" и т.д.). Это осознанно простой, объяснимый baseline — он не заменяет
+# ML-модель, но даёт реальную (а не заглушечную) фильтрацию текста промпта и OCR.
+# Ключ — код категории, значение — кортеж стемов (ru + en вперемешку).
+TEXT_LEXICONS: dict[str, tuple[str, ...]] = {
+    "sexual": (
+        "порн", "секс", "эроти", "обнаж", "голая", "голый", "голую", "интим",
+        "шлюх", "проститут", "бордель", "минет", "оргия", "разврат", "мастурб",
+        "совокупл", "сексуальн", "genital", "porn", "nude", "naked", "explicit sex",
+        "nsfw", "hentai", "blowjob", "anal", "вагин", "пенис", "сосок", "сиськ",
+        "slut", "whore", "prostitute", "escort", "masturbat", "orgy",
+    ),
+    "violence_gore": (
+        "убива", "убий", "расчлен", "кровь", "избива", "пытк", "резать",
+        "застрел", "зарез", "обезглав", "kill", "murder", "gore", "behead",
+        "torture", "bloodbath", "stab", "massacre", "mutilat",
+    ),
+    "self_harm": (
+        "суицид", "самоубий", "вскры вены", "вскрыть вены", "порезать себя",
+        "повесит", "self-harm", "self harm", "suicide", "kill myself",
+        "cut myself", "end my life", "hang myself",
+    ),
+    "hate_extremism": (
+        "террор", "экстремизм", "нацис", "фашис", "джихад", "теракт",
+        "взорвать", "geno", "terror", "extremis", "nazi", "jihad",
+        "ethnic cleansing", "white power", "лозунг ненавист",
+    ),
+    "illegal_activity": (
+        "наркот", "героин", "кокаин", "метамфетамин", "взрывчат", "оружие купить",
+        "купить ствол", "поддель", "взлом", "украсть", "drugs to buy", "cocaine",
+        "heroin", "meth recipe", "make a bomb", "build a bomb", "buy a gun illegally",
+        "counterfeit", "hack into",
+    ),
+    "harassment": (
+        "ничтожеств", "тупая тварь", "сдохни", "уебищ", "оскорбл", "унижа",
+        "loser", "kill yourself", "you are worthless", "pathetic idiot",
+        "harass", "bully",
+    ),
+    "deception_fraud": (
+        "развод на деньг", "мошенн", "обман", "фишинг", "поддельный счёт",
+        "phishing", "scam", "fraud", "fake invoice", "wire me money",
+        "impersonat",
+    ),
+    "spam_scams": (
+        "выиграл приз", "беспроигрыш", "быстрый заработок", "казино бонус",
+        "перейди по ссылк", "free money", "you won", "click this link",
+        "limited offer", "get rich quick", "crypto giveaway",
+    ),
+}
+
+
+# Маппинг таксономии LlavaGuard (O1–O9) → коды нашей таксономии. LlavaGuard —
+# обученный safety-VLM, он выдаёт ОДНУ доминирующую категорию из своих девяти +
+# бинарный rating Safe/Unsafe (см. adapters/llava_guard.py). Мы переводим её в наш
+# код. Где у LlavaGuard одна категория шире нашей (O1 = hate+harassment) или у нас
+# нет точного аналога (O8 животные, O9 катастрофы) — выбираем ближайший по тяжести
+# hard-код, чтобы реальный сигнал не терялся. Меняется здесь, в одном месте.
+LLAVAGUARD_CATEGORY_MAP: dict[str, str] = {
+    "O1": "hate_extremism",      # Hate, Humiliation, Harassment
+    "O2": "violence_gore",       # Violence, Harm, or Cruelty
+    "O3": "sexual",              # Sexual Content
+    "O4": "sexual",              # Nudity Content (отдельной «наготы» у нас нет)
+    "O5": "illegal_activity",    # Criminal Planning
+    "O6": "illegal_activity",    # Weapons or Substance Abuse
+    "O7": "self_harm",           # Self-Harm
+    "O8": "violence_gore",       # Animal Cruelty (ближе всего к gore/жестокости)
+    "O9": "shocking",            # Disasters or Emergencies (графичное/тревожное)
+}
 
 
 def is_known_category(code: str) -> bool:

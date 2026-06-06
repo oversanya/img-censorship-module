@@ -1,0 +1,34 @@
+---
+title: Блок-схема тестового модуля проверки изображения
+---
+flowchart TD
+  image["Изображение для проверки"]
+  request["ModerationRequest<br/>image_path или image_base64"]
+  entry["HTTP API или CLI"]
+  pipeline["GuardrailPipeline.moderate"]
+
+  analysis["Анализ изображения"]
+  textInImage["Текст на изображении<br/>OCR"]
+  visualRisks["Визуальные риски<br/>категории и NSFW"]
+  policy["Обобщающая оценка<br/>Policy judge"]
+
+  signals["Сигналы проверок<br/>SignalResult[]"]
+  decision["DecisionEngine<br/>правила и пороги"]
+  response["ModerationResponse"]
+  verdict["Вердикт<br/>allow / review / block"]
+
+  image -->|"файл или base64"| request
+  request -->|"запуск проверки"| entry
+  entry -->|"передача запроса"| pipeline
+  pipeline -->|"загружает изображение"| analysis
+
+  analysis -->|"извлекает"| textInImage
+  analysis -->|"оценивает"| visualRisks
+  textInImage -->|"сигнал"| signals
+  visualRisks -->|"сигнал"| signals
+  signals -->|"сводка рисков"| policy
+  policy -->|"итоговый сигнал"| signals
+
+  signals -->|"оценки категорий"| decision
+  decision -->|"итог проверки"| response
+  response -->|"поле verdict"| verdict
