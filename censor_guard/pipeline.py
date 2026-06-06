@@ -4,6 +4,7 @@ from censor_guard.adapters.explicit_detector import ExplicitContentAdapter
 from censor_guard.adapters.llava_guard import LlavaGuardAdapter
 from censor_guard.adapters.ocr import OCRAdapter
 from censor_guard.adapters.policy_judge import PolicyJudge
+from censor_guard.adapters.robust_guard import RobustGuardAdapter
 from censor_guard.adapters.text_classifier import TextGuard
 from censor_guard.adapters.visual_classifier import VisualClassifierAdapter
 from censor_guard.config import Settings
@@ -70,6 +71,14 @@ class GuardrailPipeline:
 
         self.string_guard = StringGuard(enabled=self.settings.enable_injection_revealer)
         self.image_analyzer = ImageAnalyzer(enabled=self.settings.enable_image_sanitizer)
+        
+        self.robust_guard = RobustGuardAdapter(
+            enabled=self.settings.enable_robust_guard,
+            probe_path=self.settings.robust_probe_path,
+            model_dir=self.settings.robust_model_dir,
+        )
+        self.robust_unsafe_min = self.settings.robust_unsafe_min
+        self.review_threshold = self.settings.review_threshold
         self.use_guardrails = True
 
     def assess(self, image, prompt, stage):
@@ -152,6 +161,47 @@ class GuardrailPipeline:
             "decision_after": resp_after
         }
 
+    def check_adversarial(self, image, main_unsafe_score: float):
+        """Сверяет основной пайплайн с робастной моделью как детектором adversarial.
+
+        `main_unsafe_score` — unsafe-оценка основного (не робастного) пайплайна на
+        ИСХОДНОЙ картинке (confidence из get_decision). Возмущения, заточенные под
+        основную модель, робастную почти не двигают. Поэтому опасен НАПРАВЛЕННЫЙ
+        случай: робастная модель уверенно видит unsafe (P ≥ robust_unsafe_min), а
+        основной пайплайн картинку пропускает (main_unsafe < review_threshold) —
+        классический обход. Тогда блокируем как unsafe. Обратное расхождение
+        (основная паникует, робастная спокойна) и так покрыто fail-safe-блоком и
+        здесь не штрафуется (иначе много ложных блокировок на чистых картинках).
+
+        Если робастная модель недоступна (нет robustbench/весов), индикатор молчит:
+        verdict="pass", блок не навязываем."""
+        robust_signal = self.robust_guard.moderate(image)
+        if robust_signal.status != "ok":
+            return {"verdict": "pass", "reason": "robust guard unavailable", "signal": robust_signal}
+
+        robust_unsafe = float(robust_signal.raw["robust_unsafe"])
+        main_unsafe = float(main_unsafe_score)
+        divergence = robust_unsafe - main_unsafe  # знаковое: >0 = робастная «опаснее»
+        is_adversarial = robust_unsafe >= self.robust_unsafe_min and main_unsafe < self.review_threshold
+
+        result = {
+            "robust_unsafe": robust_unsafe,
+            "main_unsafe": main_unsafe,
+            "divergence": divergence,
+            "signal": robust_signal,
+        }
+        if is_adversarial:
+            result["verdict"] = "block"
+            result["reason"] = (
+                "adversarial example suspected: robust model flags unsafe while main "
+                f"pipeline passes (robust P(unsafe)={robust_unsafe:.3f} ≥ {self.robust_unsafe_min}, "
+                f"main unsafe={main_unsafe:.3f} < {self.review_threshold})\n"
+            )
+        else:
+            result["verdict"] = "pass"
+            result["reason"] = "robust model does not contradict main pipeline"
+        return result
+
     def check_text_injections(self, prompt):
         suspicious = self.string_guard.process(prompt)
         return suspicious
@@ -182,6 +232,24 @@ class GuardrailPipeline:
         inconsistency_test = self.compare_guarded(request)
 
         if use_guardrails:
+            # Робастная модель как детектор adversarial: сверяем её P(unsafe) с
+            # unsafe-оценкой основного пайплайна на исходной картинке.
+            image = load_image(request)
+            if image is not None:
+                adversarial_test = self.check_adversarial(image, inconsistency_test['conf_before'])
+                if adversarial_test["verdict"] == "block":
+                    return ModerationResponse(
+                        request_id=request.request_id,
+                        scenario=request.scenario,
+                        stage=request.stage,
+                        verdict="block",
+                        categories=[],
+                        confidence=round(adversarial_test['divergence'], 4),
+                        reason=adversarial_test['reason'],
+                        signals=[adversarial_test['signal']],
+                        notes=["robust-model adversarial guardrail"],
+                    )
+
             if inconsistency_test["verdict"] == "block":
                 return ModerationResponse(
                     request_id=request.request_id,

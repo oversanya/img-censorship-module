@@ -53,6 +53,7 @@ def run_benchmark(
     output_dir: str | Path = "reports",
     make_html: bool = True,
     print_report: bool = True,
+    use_robust_guard: bool = True,
 ) -> dict[str, Any]:
     """Прогнать бенчмарк на курируемом датасете и вернуть пакет метрик.
 
@@ -74,7 +75,9 @@ def run_benchmark(
     if not rows_raw:
         raise RuntimeError(f"Датасет {ds_mod.DATASET_ID}[{split}] не отдал картинок — проверьте сеть/доступ.")
 
-    runner = ImageClassifierRunner()
+    runner = ImageClassifierRunner(use_robust_guard=use_robust_guard)
+    if use_robust_guard:
+        print(f"Робастный детектор adversarial включён (robust P(unsafe)≥{runner.robust_unsafe_min} при main<{runner.review_threshold}).")
     print(f"Прогрев моделей… (block≥{runner.settings.block_threshold}, review≥{runner.settings.review_threshold})")
     warmup_s = _warmup(runner)
     print(f"Модели загружены за {warmup_s:.1f} c.")
@@ -103,6 +106,13 @@ def run_benchmark(
             "blocked": result.blocked,
             "unsafe_score": result.unsafe_score,
             "pred_categories": list(result.categories),
+            "robust_unsafe": result.robust_unsafe,
+            "robust_divergence": result.robust_divergence,
+            "robust_adversarial": result.robust_adversarial,
+            # Итоговое решение с учётом робастного гарда: blocked базы ИЛИ
+            # сработавший индикатor adversarial.
+            "blocked_with_robust": bool(result.blocked or result.robust_adversarial),
+            "flagged_with_robust": bool(result.flagged or result.robust_adversarial),
             "latency_s": dt,
         }
         for code in codes:

@@ -23,7 +23,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--output-dir", default="reports", help="куда сохранять отчёты (по умолчанию ./reports)")
     p.add_argument("--no-save-report", dest="save_report", action="store_false", help="не сохранять отчёт")
     p.add_argument("--no-html", dest="make_html", action="store_false", help="не генерировать HTML-дашборд")
-    p.set_defaults(save_report=True, make_html=True)
+    p.add_argument("--robust-guard", dest="use_robust_guard", action="store_true",
+                   help="включить робастный детектор adversarial (расхождение с робастной моделью)")
+    p.set_defaults(save_report=True, make_html=True, use_robust_guard=False)
     return p
 
 
@@ -36,6 +38,7 @@ def main() -> None:
         save_report=args.save_report,
         output_dir=args.output_dir,
         make_html=args.make_html,
+        use_robust_guard=args.use_robust_guard,
     )
     # Гарантируем немедленный выход CLI: библиотека `datasets` может оставлять
     # фоновые потоки. Отчёт уже сохранён и напечатан — принудительный выход безопасен.

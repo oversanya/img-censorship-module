@@ -6,6 +6,7 @@ from typing import Any
 from PIL import Image
 
 from censor_guard.adapters.explicit_detector import ExplicitContentAdapter
+from censor_guard.adapters.robust_guard import RobustGuardAdapter
 from censor_guard.adapters.visual_classifier import VisualClassifierAdapter
 from censor_guard.config import Settings
 from censor_guard.decision import DecisionEngine
@@ -47,6 +48,12 @@ class ClassifierResult:
     # Сырые оценки по каждому ok-сенсору: {имя_сенсора: {категория: оценка}}.
     signal_scores: dict[str, dict[str, float]]
     notes: list[str] = field(default_factory=list)
+    # Робастный индикатор adversarial (None, если гард выключен/недоступен):
+    # P(unsafe) робастной модели, его расхождение с unsafe_score основного раннера
+    # и флаг «расхождение ≥ порога» (подозрение на adversarial-пример).
+    robust_unsafe: float | None = None
+    robust_divergence: float | None = None
+    robust_adversarial: bool = False
 
     @property
     def flagged(self) -> bool:
@@ -79,7 +86,12 @@ class ImageClassifierRunner:
     хотим измерить. Модели грузятся лениво и переиспользуются между вызовами.
     """
 
-    def __init__(self, settings: Settings | None = None, use_policy_judge: bool = True) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        use_policy_judge: bool = True,
+        use_robust_guard: bool = False,
+    ) -> None:
         self.settings = settings or Settings()
         self.visual = VisualClassifierAdapter(
             enabled=True,
@@ -95,6 +107,16 @@ class ImageClassifierRunner:
         # use_policy_judge=True → сводим сенсоры взвешенным noisy-OR (fusion.py);
         # False → движок берёт максимум по сенсорам (легаси-режим для сравнения).
         self.use_policy_judge = use_policy_judge
+        # Робастный детектор adversarial (опционален в бенчмарке). Веса/модель грузятся
+        # лениво при первом вызове; если недоступны — гард молча молчит (score=None).
+        self.use_robust_guard = use_robust_guard
+        self.robust_guard = RobustGuardAdapter(
+            enabled=use_robust_guard,
+            probe_path=self.settings.robust_probe_path,
+            model_dir=self.settings.robust_model_dir,
+        )
+        self.robust_unsafe_min = self.settings.robust_unsafe_min
+        self.review_threshold = self.settings.review_threshold
         self.engine = DecisionEngine(
             block_threshold=self.settings.block_threshold,
             review_threshold=self.settings.review_threshold,
@@ -138,7 +160,7 @@ class ImageClassifierRunner:
 
         response = self.engine.decide(self._request, signals)
 
-        return ClassifierResult(
+        result = ClassifierResult(
             verdict=response.verdict,
             categories=list(response.categories),
             confidence=response.confidence,
@@ -146,6 +168,22 @@ class ImageClassifierRunner:
             signal_scores=signal_scores,
             notes=list(response.notes),
         )
+
+        # Робастный детектор adversarial: сверяем P(unsafe) робастной модели с
+        # unsafe_score основного раннера. Вердикт НЕ трогаем — пишем сырые поля,
+        # чтобы бенчмарк честно сравнил baseline и baseline+robust.
+        if self.use_robust_guard:
+            robust_unsafe = self.robust_guard.unsafe_score(image)
+            if robust_unsafe is not None:
+                result.robust_unsafe = robust_unsafe
+                result.robust_divergence = robust_unsafe - result.unsafe_score  # знаковое
+                # Направленное правило: робастная уверенно unsafe, основная пропускает.
+                result.robust_adversarial = (
+                    robust_unsafe >= self.robust_unsafe_min
+                    and result.unsafe_score < self.review_threshold
+                )
+
+        return result
 
     def raw_visual_scores(self, image: Image.Image, candidate_labels: list[str]) -> dict[str, float]:
         """Прямой вызов zero-shot CLIP с произвольными метками.

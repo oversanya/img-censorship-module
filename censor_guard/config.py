@@ -73,6 +73,11 @@ class Settings:
     enable_text_guard: bool = _env_bool("CENSOR_ENABLE_TEXT_GUARD", True)
     enable_injection_revealer: bool = _env_bool("CENSOR_ENABLE_INJECTION_REVEALER", True)
     enable_image_sanitizer: bool = _env_bool("CENSOR_ENABLE_IMAGE_SANITIZER", True)
+    # Робастный цензор (Linf-robust ConvNeXt + linear probe) как ИНДИКАТОР
+    # adversarial-примеров. Сам по себе категории не выставляет — сравнивается с
+    # основным пайплайном (см. robust_unsafe_min). Мягко
+    # деградирует, если robustbench/веса недоступны.
+    enable_robust_guard: bool = _env_bool("CENSOR_ENABLE_ROBUST_GUARD", True)
     # Всегда работающий обученный визуальный safety-судья (LlavaGuard-0.5B). Второй
     # независимый визуальный сенсор рядом с CLIP. На CPU ~10–30 с/картинку — можно
     # выключить флагом, тогда визуал держит только CLIP + NSFW-детектор.
@@ -102,6 +107,26 @@ class Settings:
     # CLIP-base слабоват, 0.5 давил его почти в ноль; 0.35 даёт сигнал, оставляя
     # безобидное в нуле, а шум — ниже порога улики 0.3. См. calibration.py.
     calibration_floor: float = _env_float("CENSOR_CALIBRATION_FLOOR", 0.35)
+    # Веса linear probe робастного цензора. По умолчанию лежат в корне проекта
+    # (robust_probe.npz). Каталог model_dir — куда robustbench кладёт/ищет
+    # чекпойнт базовой робастной модели.
+    robust_probe_path: str = os.getenv(
+        "CENSOR_ROBUST_PROBE_PATH",
+        str(Path(__file__).resolve().parent.parent / "models/robust_probe.npz"),
+    )
+    robust_model_dir: str = os.getenv(
+        "CENSOR_ROBUST_MODEL_DIR",
+        str(Path(__file__).resolve().parent.parent / "models"),
+    )
+    # Детектор adversarial = НАПРАВЛЕННОЕ расхождение моделей: блокируем, только если
+    # робастная модель уверенно говорит «unsafe» (P ≥ robust_unsafe_min), А основной
+    # пайплайн при этом картинку пропускает (unsafe_score < review_threshold). Это
+    # ровно сценарий обхода: возмущение обмануло основную модель, но робастную — нет.
+    # Симметричный abs-порог тут плох (на чистых картинках расхождение шкал даёт
+    # ~27% ложных блокировок); направленное правило при том же отлове adversarial
+    # даёт ~4.5% FP. Калибровано на benchmarking-сплите (см. reports/). 0.7 — колено
+    # кривой (отлов ~97%); 0.9 — консервативнее (~84% при ~1.7% FP).
+    robust_unsafe_min: float = _env_float("CENSOR_ROBUST_UNSAFE_MIN", 0.7)
     hf_cache_dir: str = os.getenv("CENSOR_HF_CACHE_DIR", _default_hf_cache())
     tesseract_cmd: str | None = os.getenv("CENSOR_TESSERACT_CMD", _default_tesseract_cmd() or "")
     tessdata_dir: str | None = os.getenv("CENSOR_TESSDATA_DIR", _default_tessdata_dir() or "")

@@ -15,3 +15,9 @@ accelerate>=0.31,<1.0
 # Optional: faster Hugging Face model downloads (Xet protocol). Remove this line if
 # the wheel is unavailable for your platform — downloads still work over plain HTTP.
 hf_xet>=1.0
+
+# Robust adversarial-example guardrail (robust_censor.py + RobustGuardAdapter):
+# Linf-robust ConvNeXt loaded via robustbench. robustbench pulls timm and a PyPI
+# AutoAttack package named `pyautoattack`; robustbench imports it as `autoattack`,
+# so the adapter installs a tiny module alias at load time (see robust_guard.py).
+robustbench>=1.1
