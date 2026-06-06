@@ -102,6 +102,8 @@ class Settings:
     llava_guard_unsafe_score: float = _env_float("CENSOR_LLAVA_GUARD_UNSAFE_SCORE", 0.9)
     block_threshold: float = _env_float("CENSOR_BLOCK_THRESHOLD", 0.85)
     review_threshold: float = _env_float("CENSOR_REVIEW_THRESHOLD", 0.55)
+    log_dir: str = os.getenv("CENSOR_LOG_DIR", "logs")
+    policy_version: str = os.getenv("CENSOR_POLICY_VERSION", "v1")
     # Порог калибровки CLIP относительно safe-якоря (равные шансы = 0.5). Ниже —
     # чувствительнее (больше review/block), выше — консервативнее. Дефолт 0.35:
     # CLIP-base слабоват, 0.5 давил его почти в ноль; 0.35 даёт сигнал, оставляя

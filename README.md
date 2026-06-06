@@ -78,6 +78,31 @@ Without these the service still runs — the ML sensors just report `skipped` (g
 
 The repo ships `tools/tessdata/eng.traineddata` and `tools/tessdata/rus.traineddata`, so Russian OCR does not depend on system language packs.
 
+## JSONL logging demo
+
+Run one command to execute a real moderation request, write JSONL logs, read them
+back, and save a proof report:
+
+```bash
+python scripts/run_logging_demo.py
+```
+
+The runner writes `docs/logging_demo_run.md` with every command it executed, the
+moderation response, row counts for the three JSONL streams, and a sample business
+audit event.
+
+Runtime logs are written by the production `JsonlLogSink`:
+
+- `logs/logging_demo/system.jsonl`
+- `logs/logging_demo/business_audit.jsonl`
+- `logs/logging_demo/raw_payloads.jsonl`
+
+Concurrent writers are serialized with a per-log-directory `.jsonl.lock` file, so
+parallel threads and worker processes do not interleave JSONL lines.
+
+This path uses no database, no external service runtime, no mock sink, and no
+hidden fallback storage.
+
 ## Web UI demo (recommended way to see it)
 
 A single self-contained file ([ui_demo.py](ui_demo.py)) — drop an image and/or type a prompt, get the verdict.
@@ -190,6 +215,7 @@ show_figures(result["figures"])  # интерактивные Plotly-графи�
 - `CENSOR_POLICY_JUDGE_MODEL_ID=google/shieldgemma-2-4b-it`
 - `CENSOR_BLOCK_THRESHOLD=0.85`
 - `CENSOR_REVIEW_THRESHOLD=0.55`
+- `CENSOR_LOG_DIR=logs`
 - `CENSOR_CALIBRATION_FLOOR=0.35` — CLIP calibration: lower = more sensitive, higher = more conservative
 - `CENSOR_HF_CACHE_DIR=...`
 - `CENSOR_TESSERACT_CMD=...`
