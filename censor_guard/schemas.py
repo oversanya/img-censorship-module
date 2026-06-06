@@ -5,6 +5,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from censor_guard.observability import DecisionExplanation
+
 
 Stage = Literal["input", "output"]
 Scenario = Literal["text2image", "img2img_stylization", "img2img_editing", "output"]
@@ -40,6 +42,7 @@ class ModerationResponse(BaseModel):
     confidence: float = 0.0
     reason: str
     evidence: dict[str, list[str]] = Field(default_factory=dict)
+    audit: DecisionExplanation
     signals: list[SignalResult] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 

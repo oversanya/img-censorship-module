@@ -3,9 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from censor_guard.observability import ObservabilityError
 from censor_guard.pipeline import GuardrailPipeline
 from censor_guard.schemas import ModerationRequest, ModerationResponse
 
@@ -20,6 +21,14 @@ pipeline = GuardrailPipeline()
 static_dir = Path(__file__).resolve().parent / "static"
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.exception_handler(ObservabilityError)
+def observability_error_handler(_, exc: ObservabilityError) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "moderation logging failed", "error": str(exc)},
+    )
 
 
 @app.get("/health")

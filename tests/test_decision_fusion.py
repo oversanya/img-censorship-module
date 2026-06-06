@@ -48,7 +48,12 @@ class DecisionWithFusionTests(unittest.TestCase):
                 sources={"political_persuasion": ["visual_classifier", "text_guard"]},
             )
         ]
-        self.assertEqual(self.engine.decide(self.request, double).verdict, "block")
+        response = self.engine.decide(self.request, double)
+        self.assertEqual(response.verdict, "block")
+        self.assertEqual(
+            response.audit.reason_code,
+            "soft_category_confirmed_by_multiple_sensors",
+        )
 
     def test_soft_category_blocks_when_shieldgemma_confirms(self) -> None:
         signals = [
@@ -58,7 +63,9 @@ class DecisionWithFusionTests(unittest.TestCase):
                 sources={"harassment": ["policy_judge_shieldgemma"]},
             )
         ]
-        self.assertEqual(self.engine.decide(self.request, signals).verdict, "block")
+        response = self.engine.decide(self.request, signals)
+        self.assertEqual(response.verdict, "block")
+        self.assertEqual(response.audit.reason_code, "soft_category_confirmed_by_policy_judge")
 
     def test_evidence_reports_contributing_sensors(self) -> None:
         signals = [
